@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OFM — Smart Fleet Management System</title>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cr:#C0392B;--cr-d:#96281B;--cr-g:rgba(192,57,43,0.15);
+  --bg:#08080E;--s1:#0F0F18;--s2:#16161F;--s3:#1C1C28;
+  --bd:rgba(255,255,255,0.06);--bd2:rgba(255,255,255,0.1);
+  --tx:#F0F0F0;--mu:#777;--mu2:#555;
+  --gn:#27AE60;--or:#E67E22;--yw:#F1C40F;--bl:#2980B9;--pu:#8E44AD;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden;}
+
+/* ===== LOGIN SCREEN ===== */
+#loginScreen{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;z-index:9999;
+}
+.login-box{
+  background:var(--s1);border:1px solid var(--bd2);border-radius:20px;
+  padding:40px;width:360px;text-align:center;
+}
+.login-logo{
+  background:var(--cr);color:#fff;font-weight:900;font-size:22px;
+  padding:10px 20px;border-radius:12px;display:inline-block;margin-bottom:20px;letter-spacing:2px;
+}
+.login-title{font-size:18px;font-weight:700;margin-bottom:6px;}
+.login-sub{font-size:12px;color:var(--mu);margin-bottom:28px;}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.role-btn{
+  background:var(--s2);border:2px solid var(--bd);border-radius:12px;
+  padding:16px 10px;cursor:pointer;transition:all 0.2s;text-align:center;
+}
+.role-btn:hover,.role-btn.active{border-color:var(--cr);background:var(--cr-g);}
+.role-btn .ri{font-size:22px;margin-bottom:6px;}
+.role-btn .rn{font-size:12px;font-weight:700;}
+.role-btn .rs{font-size:10px;color:var(--mu);}
+.pin-row{display:flex;gap:8px;margin-bottom:16px;}
+.pin-row input{
+  flex:1;background:var(--s2);border:1px solid var(--bd2);color:var(--tx);
+  padding:12px;border-radius:10px;font-size:16px;text-align:center;letter-spacing:4px;
+  font-family:'Inter',sans-serif;outline:none;
+}
+.pin-row input:focus{border-color:var(--cr);}
+.btn-login{
+  width:100%;background:var(--cr);color:#fff;border:none;padding:13px;
+  border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;
+}
+.btn-login:hover{background:var(--cr-d);}
+
+/* ===== TOP BAR ===== */
+#appScreen{display:none;}
+.topbar{
+  background:var(--s1);border-bottom:1px solid var(--bd);
+  padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.tb-left{display:flex;align-items:center;gap:14px;}
+.ofm-logo{
+  background:var(--cr);color:#fff;font-weight:900;font-size:13px;
+  padding:6px 12px;border-radius:8px;letter-spacing:1.5px;
+}
+.tb-title{font-size:15px;font-weight:700;}
+.tb-sub{font-size:11px;color:var(--mu);}
+.tb-right{display:flex;align-items:center;gap:12px;}
+.live-pill{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(39,174,96,0.12);border:1px solid rgba(39,174,96,0.25);
+  color:var(--gn);padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;
+}
+.live-dot{width:6px;height:6px;background:var(--gn);border-radius:50%;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.3;transform:scale(1.4);}}
+.role-pill{
+  font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;
+  background:var(--cr-g);border:1px solid rgba(192,57,43,0.3);color:var(--cr);
+}
+.btn-logout{
+  background:transparent;border:1px solid var(--bd2);color:var(--mu);
+  padding:5px 12px;border-radius:8px;font-size:11px;cursor:pointer;transition:all 0.2s;
+}
+.btn-logout:hover{border-color:var(--cr);color:var(--cr);}
+
+/* ===== NAV TABS ===== */
+.nav-tabs{
+  background:var(--s1);border-bottom:1px solid var(--bd);
+  display:flex;padding:0 24px;gap:4px;overflow-x:auto;
+}
+.nav-tab{
+  padding:12px 18px;font-size:12px;font-weight:600;color:var(--mu);
+  cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all 0.2s;
+}
+.nav-tab:hover{color:var(--tx);}
+.nav-tab.active{color:var(--cr);border-bottom-color:var(--cr);}
+
+/* ===== MAIN CONTENT ===== */
+.page{display:none;padding:24px;max-width:1400px;margin:0 auto;}
+.page.active{display:block;}
+
+/* ===== STATS ROW ===== */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.stat-card{
+  background:var(--s1);border:1px solid var(--bd);border-radius:14px;
+  padding:16px 18px;display:flex;flex-direction:column;gap:4px;
+}
+.stat-label{font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+.stat-value{font-size:28px;font-weight:900;}
+.stat-sub{font-size:11px;color:var(--mu);}
+.v-gn{color:var(--gn);} .v-or{color:var(--or);} .v-cr{color:var(--cr);} .v-bl{color:var(--bl);}
+
+/* ===== SECTION TITLE ===== */
+.sec-title{
+  font-size:11px;font-weight:700;color:var(--mu);letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px;
+}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--bd);}
+
+/* ===== QUEUE SECTION ===== */
+.queue-layout{display:grid;grid-template-columns:320px 1fr;gap:16px;}
+.queue-panel{
+  background:var(--s1);border:1px solid var(--bd);border-radius:14px;overflow:hidden;
+}
+.panel-header{
+  padding:14px 16px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.panel-header-title{font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:1px;}
+.count-badge{
+  background:var(--cr);color:#fff;font-size:11px;font-weight:700;
+  padding:2px 8px;border-radius:10px;
+}
+.truck-list{overflow-y:auto;max-height:600px;padding:10px;}
+.truck-card{
+  background:var(--s2);border:1px solid var(--bd);border-radius:10px;
+  padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all 0.2s;position:relative;
+}
+.truck-card:hover{border-color:var(--cr);transform:translateX(3px);}
+.truck-card.selected{border-color:var(--cr);background:var(--cr-g);}
+.truck-plate{
+  background:var(--yw);color:#000;font-weight:900;font-size:12px;
+  padding:3px 10px;border-radius:5px;display:inline-block;margin-bottom:8px;
+  letter-spacing:1px;border:2px solid #c9a800;
+}
+.truck-meta{font-size:11px;color:var(--mu);line-height:1.6;}
+.truck-meta strong{color:var(--tx);font-size:12px;}
+.cat-badge{
+  position:absolute;top:10px;right:10px;font-size:9px;font-weight:700;
+  padding:2px 7px;border-radius:5px;
+}
+.cat-P{background:rgba(41,128,185,0.2);color:#5dade2;border:1px solid rgba(41,128,185,0.3);}
+.cat-R{background:rgba(39,174,96,0.2);color:#58d68d;border:1px solid rgba(39,174,96,0.3);}
+.cat-B{background:rgba(241,196,15,0.2);color:#f4d03f;border:1px solid rgba(241,196,15,0.3);}
+.cat-M{background:rgba(192,57,43,0.2);color:#e74c3c;border:1px solid rgba(192,57,43,0.3);}
+.queue-num{
+  position:absolute;bottom:10px;right:10px;
+  background:var(--s3);border:1px solid var(--bd2);
+  font-size:10px;font-weight:700;color:var(--mu);
+  padding:2px 7px;border-radius:5px;
+}
+
+/* ===== ASSIGN PANEL ===== */
+.assign-box{
+  background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:20px;
+}
+.assign-title{font-size:14px;font-weight:700;color:var(--cr);margin-bottom:16px;}
+.assign-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
+.af{display:flex;flex-direction:column;gap:5px;flex:1;min-width:130px;}
+.af label{font-size:11px;color:var(--mu);font-weight:600;}
+.af input,.af select{
+  background:var(--s2);border:1px solid var(--bd2);color:var(--tx);
+  padding:10px 12px;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;
+  transition:border 0.2s;
+}
+.af input:focus,.af select:focus{border-color:var(--cr);}
+.btn-cr{
+  background:var(--cr);color:#fff;border:none;padding:10px 20px;
+  border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;
+}
+.btn-cr:hover{background:var(--cr-d);transform:translateY(-1px);}
+.btn-ghost{
+  background:transparent;color:var(--mu);border:1px solid var(--bd2);
+  padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;
+}
+.btn-ghost:hover{border-color:var(--cr);color:var(--cr);}
+
+/* ===== LINES GRID ===== */
+.building-block{
+  background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:18px;margin-bottom:16px;
+}
+.building-label{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.b-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.bi-main{background:rgba(192,57,43,0.2);}
+.bi-cmill{background:rgba(41,128,185,0.2);}
+.lines-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;}
+.line-slot{
+  border:2px dashed rgba(255,255,255,0.08);border-radius:10px;padding:14px 8px;
+  text-align:center;cursor:pointer;transition:all 0.25s;position:relative;
+  min-height:95px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+}
+.line-slot:hover{border-color:var(--cr);background:rgba(192,57,43,0.04);}
+.line-slot.occupied{border-style:solid;border-color:var(--gn);background:rgba(39,174,96,0.06);}
+.line-slot.restricted{border-color:rgba(41,128,185,0.35);background:rgba(41,128,185,0.04);}
+.line-name{font-size:17px;font-weight:900;}
+.line-status{font-size:9px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:0.5px;}
+.line-plate{background:var(--yw);color:#000;font-weight:800;font-size:9px;padding:2px 6px;border-radius:4px;border:1.5px solid #c9a800;}
+.line-prod{font-size:9px;color:var(--mu);max-width:100px;text-align:center;line-height:1.3;}
+.line-timer{font-size:9px;color:var(--or);font-weight:700;}
+.res-badge{position:absolute;top:5px;right:5px;font-size:8px;background:rgba(41,128,185,0.25);color:#5dade2;padding:1px 5px;border-radius:4px;font-weight:700;}
+
+/* ===== SO MANAGEMENT ===== */
+.so-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.so-toolbar input{
+  background:var(--s1);border:1px solid var(--bd2);color:var(--tx);
+  padding:9px 14px;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;flex:1;min-width:200px;
+}
+.so-toolbar input:focus{border-color:var(--cr);}
+.so-table-wrap{background:var(--s1);border:1px solid var(--bd);border-radius:14px;overflow:hidden;}
+.so-table{width:100%;border-collapse:collapse;}
+.so-table th{
+  background:var(--s2);padding:11px 14px;text-align:left;
+  font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.5px;
+  border-bottom:1px solid var(--bd);
+}
+.so-table td{padding:11px 14px;font-size:12px;border-bottom:1px solid var(--bd);vertical-align:middle;}
+.so-table tr:last-child td{border-bottom:none;}
+.so-table tr:hover td{background:rgba(255,255,255,0.02);}
+.status-pill{
+  font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;
+}
+.sp-pending{background:rgba(241,196,15,0.15);color:#f4d03f;border:1px solid rgba(241,196,15,0.3);}
+.sp-assigned{background:rgba(41,128,185,0.15);color:#5dade2;border:1px solid rgba(41,128,185,0.3);}
+.sp-loading{background:rgba(230,126,34,0.15);color:#e67e22;border:1px solid rgba(230,126,34,0.3);}
+.sp-done{background:rgba(39,174,96,0.15);color:#58d68d;border:1px solid rgba(39,174,96,0.3);}
+.sp-updated{background:rgba(142,68,173,0.15);color:#bb8fce;border:1px solid rgba(142,68,173,0.3);}
+.src-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;}
+.src-M{background:rgba(39,174,96,0.15);color:#58d68d;}
+.src-E{background:rgba(41,128,185,0.15);color:#5dade2;}
+.src-P{background:rgba(142,68,173,0.15);color:#bb8fce;}
+.btn-sm{
+  font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer;border:none;transition:all 0.2s;
+}
+.btn-edit{background:rgba(41,128,185,0.2);color:#5dade2;}
+.btn-edit:hover{background:rgba(41,128,185,0.35);}
+.btn-del{background:rgba(192,57,43,0.2);color:var(--cr);}
+.btn-del:hover{background:rgba(192,57,43,0.35);}
+
+/* ===== CUSTOMER VIEW ===== */
+.customer-search{
+  max-width:500px;margin:40px auto;background:var(--s1);
+  border:1px solid var(--bd);border-radius:16px;padding:30px;text-align:center;
+}
+.cs-title{font-size:16px;font-weight:700;margin-bottom:6px;}
+.cs-sub{font-size:12px;color:var(--mu);margin-bottom:20px;}
+.cs-input{
+  width:100%;background:var(--s2);border:1px solid var(--bd2);color:var(--tx);
+  padding:12px 16px;border-radius:10px;font-size:15px;font-family:'Inter',sans-serif;
+  outline:none;text-align:center;letter-spacing:2px;margin-bottom:12px;
+}
+.cs-input:focus{border-color:var(--cr);}
+.so-result-card{
+  background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:20px;
+  max-width:500px;margin:0 auto;
+}
+.so-result-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.so-result-num{font-size:18px;font-weight:800;}
+.so-timeline{display:flex;flex-direction:column;gap:10px;}
+.tl-item{display:flex;align-items:center;gap:12px;}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.tl-dot.done{background:var(--gn);}
+.tl-dot.active{background:var(--or);animation:pulse 1.5s infinite;}
+.tl-dot.pending{background:var(--mu2);}
+.tl-label{font-size:12px;font-weight:600;}
+.tl-time{font-size:11px;color:var(--mu);margin-left:auto;}
+.so-products{margin-top:16px;border-top:1px solid var(--bd);padding-top:16px;}
+.so-prod-row{display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px solid var(--bd);}
+.so-prod-row:last-child{border-bottom:none;}
+
+/* ===== MODAL ===== */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.7);
+  display:flex;align-items:center;justify-content:center;z-index:500;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{
+  background:var(--s1);border:1px solid var(--bd2);border-radius:16px;
+  padding:24px;width:90%;max-width:520px;max-height:85vh;overflow-y:auto;
+  transform:translateY(20px);transition:transform 0.2s;
+}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;}
+.modal-close{background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer;}
+.modal-close:hover{color:var(--cr);}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.form-group label{font-size:11px;color:var(--mu);font-weight:600;}
+.form-group input,.form-group select,.form-group textarea{
+  background:var(--s2);border:1px solid var(--bd2);color:var(--tx);
+  padding:10px 12px;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--cr);}
+.form-group textarea{resize:vertical;min-height:70px;}
+.product-lines{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.prod-line{
+  background:var(--s2);border:1px solid var(--bd);border-radius:8px;
+  padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+}
+.prod-line select,.prod-line input{
+  background:var(--s3);border:1px solid var(--bd);color:var(--tx);
+  padding:7px 10px;border-radius:6px;font-size:12px;font-family:'Inter',sans-serif;outline:none;
+}
+.prod-line select{flex:2;min-width:140px;}
+.prod-line input{flex:1;min-width:70px;}
+.btn-add-prod{
+  background:rgba(39,174,96,0.15);color:var(--gn);border:1px dashed rgba(39,174,96,0.3);
+  padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;width:100%;
+  transition:all 0.2s;
+}
+.btn-add-prod:hover{background:rgba(39,174,96,0.25);}
+.btn-remove-prod{background:none;border:none;color:var(--mu);cursor:pointer;font-size:14px;padding:2px 6px;}
+.btn-remove-prod:hover{color:var(--cr);}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--bd);}
+.dup-warn{
+  background:rgba(241,196,15,0.1);border:1px solid rgba(241,196,15,0.3);
+  color:#f4d03f;padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:14px;display:none;
+}
+
+/* ===== TOAST ===== */
+.toast{
+  position:fixed;bottom:24px;right:24px;
+  background:var(--gn);color:#fff;padding:12px 20px;border-radius:10px;
+  font-size:13px;font-weight:600;transform:translateY(80px);opacity:0;
+  transition:all 0.3s;z-index:9999;max-width:320px;
+}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.err{background:var(--cr);}
+.toast.warn{background:var(--or);}
+
+/* ===== WHATSAPP MODAL ===== */
+.wa-options{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+.wa-btn{
+  display:flex;align-items:center;gap:12px;background:var(--s2);border:1px solid var(--bd);
+  border-radius:10px;padding:14px 16px;cursor:pointer;transition:all 0.2s;
+}
+.wa-btn:hover{border-color:var(--cr);}
+.wa-btn .wi{font-size:20px;}
+.wa-btn .wt{font-size:13px;font-weight:600;}
+.wa-btn .ws{font-size:11px;color:var(--mu);}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:768px){
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+  .queue-layout{grid-template-columns:1fr;}
+  .lines-grid{grid-template-columns:repeat(3,1fr);}
+  .assign-row{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">OFM</div>
+    <div class="login-title">Smart Fleet System</div>
+    <div class="login-sub">Oman Flour Mills — Feed Mills Department</div>
+    <div class="role-grid">
+      <div class="role-btn active" onclick="selectRole('admin')" id="role-admin">
+        <div class="ri">👑</div>
+        <div class="rn">Admin</div>
+        <div class="rs">Full Access</div>
+      </div>
+      <div class="role-btn" onclick="selectRole('security')" id="role-security">
+        <div class="ri">🛡️</div>
+        <div class="rn">Security</div>
+        <div class="rs">Gate + Queue</div>
+      </div>
+      <div class="role-btn" onclick="selectRole('customer')" id="role-customer">
+        <div class="ri">🚛</div>
+        <div class="rn">Customer</div>
+        <div class="rs">Track SO</div>
+      </div>
+      <div class="role-btn" onclick="selectRole('management')" id="role-management">
+        <div class="ri">📊</div>
+        <div class="rn">Management</div>
+        <div class="rs">View Only</div>
+      </div>
+    </div>
+    <div class="pin-row">
+      <input type="password" id="pinInput" placeholder="PIN" maxlength="4" onkeyup="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" onclick="doLogin()">Enter System</button>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="appScreen">
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="ofm-logo">OFM</div>
+      <div>
+        <div class="tb-title">Smart Fleet Management</div>
+        <div class="tb-sub" id="shiftLabel">Feed Mills — Loading Day</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+      <div class="role-pill" id="rolePill">ADMIN</div>
+      <button class="btn-logout" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="nav-tabs" id="navTabs">
+    <div class="nav-tab active" onclick="showPage('dashboard')">📊 Dashboard</div>
+    <div class="nav-tab" onclick="showPage('queue')">🚛 Queue & Lines</div>
+    <div class="nav-tab" onclick="showPage('so')">📋 SO Management</div>
+    <div class="nav-tab" onclick="showPage('customer')">👤 Customer Track</div>
+  </div>
+
+  <!-- ===== DASHBOARD PAGE ===== -->
+  <div class="page active" id="page-dashboard">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Trucks in Queue</div>
+        <div class="stat-value v-or" id="stat-queue">0</div>
+        <div class="stat-sub">waiting to load</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Lines Active</div>
+        <div class="stat-value v-gn" id="stat-lines">0</div>
+        <div class="stat-sub">of 13 total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">SO Pending</div>
+        <div class="stat-value v-cr" id="stat-so">0</div>
+        <div class="stat-sub">awaiting trucks</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Dispatched Today</div>
+        <div class="stat-value v-bl" id="stat-done">0</div>
+        <div class="stat-sub">trucks completed</div>
+      </div>
+    </div>
+    <div class="sec-title">Today's Activity</div>
+    <div class="so-table-wrap">
+      <table class="so-table">
+        <thead><tr>
+          <th>SO Number</th><th>Customer</th><th>Category</th><th>Products</th><th>Status</th><th>Time</th>
+        </tr></thead>
+        <tbody id="dashTable"><tr><td colspan="6" style="text-align:center;color:var(--mu);padding:30px;">Loading data...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== QUEUE & LINES PAGE ===== -->
+  <div class="page" id="page-queue">
+    <div class="queue-layout">
+      <!-- LEFT: TRUCK QUEUE -->
+      <div class="queue-panel">
+        <div class="panel-header">
+          <span class="panel-header-title">Waiting Queue</span>
+          <span class="count-badge" id="queueBadge">0</span>
+        </div>
+        <div class="truck-list" id="truckQueue">
+          <div style="text-align:center;color:var(--mu);padding:30px;font-size:12px;">No trucks in queue</div>
+        </div>
+        <div style="padding:10px;">
+          <button class="btn-cr" style="width:100%;font-size:12px;" onclick="openRegisterTruck()">+ Register New Truck</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: ASSIGN + LINES -->
+      <div>
+        <!-- ASSIGN PANEL -->
+        <div class="assign-box" style="margin-bottom:16px;">
+          <div class="assign-title">⚡ Assign Truck to Loading Line</div>
+          <div class="assign-row">
+            <div class="af">
+              <label>Selected Truck</label>
+              <input type="text" id="selTruck" placeholder="Click truck from queue..." readonly>
+            </div>
+            <div class="af">
+              <label>Category (Auto)</label>
+              <input type="text" id="selCat" placeholder="Auto-detected..." readonly>
+            </div>
+            <div class="af">
+              <label>Assign to Line</label>
+              <select id="lineSelect">
+                <option value="">-- Select Line --</option>
+                <optgroup label="Main Building">
+                  <option value="D1">D1 — Direct 1</option>
+                  <option value="D2">D2 — Direct 2</option>
+                  <option value="R1">R1 — Ramp 1</option>
+                  <option value="R2">R2 — Ramp 2</option>
+                  <option value="P4">P4 — Direct 3</option>
+                  <option value="Red">Red Line — Direct 4</option>
+                  <option value="D5">D5 — Direct 5</option>
+                  <option value="FL1">FL1 — Forklift 1</option>
+                  <option value="FL2">FL2 — Forklift 2</option>
+                  <option value="FL3">FL3 — Forklift 3</option>
+                  <option value="FL4">FL4 — Forklift 4</option>
+                </optgroup>
+                <optgroup label="C-Mill (Poultry Only 🐔)">
+                  <option value="C1">C1 — C-Mill Direct 1</option>
+                  <option value="C2">C2 — C-Mill Direct 2</option>
+                </optgroup>
+              </select>
+            </div>
+            <button class="btn-cr" onclick="assignLine()">Assign ✓</button>
+            <button class="btn-ghost" onclick="clearSel()">Clear</button>
+          </div>
+        </div>
+
+        <!-- MAIN BUILDING -->
+        <div class="sec-title">Main Building Lines</div>
+        <div class="building-block">
+          <div class="building-label"><div class="b-icon bi-main">🏭</div>Main Building — D1, D2, R1, R2, P4, Red, D5, FL1-4</div>
+          <div class="lines-grid">
+            <div class="line-slot" id="slot-D1" onclick="clickLine('D1')"><div class="line-name">D1</div><div class="line-status">Available</div></div>
+            <div class="line-slot" id="slot-D2" onclick="clickLine('D2')"><div class="line-name">D2</div><div class="line-status">Available</div></div>
+            <div class="line-slot" id="slot-R1" onclick="clickLine('R1')"><div class="line-name">R1</div><div class="line-status">Available</div></div>
+            <div class="line-slot" id="slot-R2" onclick="clickLine('R2')"><div class="line-name">R2</div><div class="line-status">Available</div></div>
+            <div class="line-slot" id="slot-P4" onclick="clickLine('P4')"><div class="line-name">P4</div><div class="line-status">Available</div></div>
+            <div class="line-slot" id="slot-Red" onclick="clickLine('Red')"><div class="line-name">Red</div><div class="line-status">Available</div></div>
+            <div class="line-slot" id="slot-D5" onclick="clickLine('D5')"><div class="line-name">D5</div><div class="line-status">Available</div></div>
+            <div class="line-slot" id="slot-FL1" onclick="clickLine('FL1')"><div class="line-name">FL1</div><div class="line-status">Available</div></div>
+            <div class="line-slot" id="slot-FL2" onclick="clickLine('FL2')"><div class="line-name">FL2</div><div class="line-status">Available</div></div>
+            <div class="line-slot" id="slot-FL3" onclick="clickLine('FL3')"><div class="line-name">FL3</div><div class="line-status">Available</div></div>
+            <div class="line-slot" id="slot-FL4" onclick="clickLine('FL4')"><div class="line-name">FL4</div><div class="line-status">Available</div></div>
+          </div>
+        </div>
+
+        <!-- C-MILL -->
+        <div class="sec-title">C-Mill Lines (Poultry Only)</div>
+        <div class="building-block">
+          <div class="building-label"><div class="b-icon bi-cmill">🐔</div>C-Mill — C1, C2 (Restricted: Poultry Items Only)</div>
+          <div class="lines-grid">
+            <div class="line-slot restricted" id="slot-C1" onclick="clickLine('C1')"><div class="res-badge">POULTRY</div><div class="line-name">C1</div><div class="line-status">Available</div></div>
+            <div class="line-slot restricted" id="slot-C2" onclick="clickLine('C2')"><div class="res-badge">POULTRY</div><div class="line-name">C2</div><div class="line-status">Available</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SO MANAGEMENT PAGE ===== -->
+  <div class="page" id="page-so">
+    <div class="so-toolbar">
+      <input type="text" id="soSearch" placeholder="🔍 Search SO number or customer..." oninput="renderSOTable()">
+      <button class="btn-cr" onclick="openAddSO()">+ New SO</button>
+      <button class="btn-ghost" onclick="openImport()">📥 Import ERP/Power BI</button>
+    </div>
+    <div class="so-table-wrap">
+      <table class="so-table">
+        <thead><tr>
+          <th>SO Number</th><th>Customer</th><th>Phone</th><th>Products</th><th>Source</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="soTableBody"><tr><td colspan="7" style="text-align:center;color:var(--mu);padding:30px;">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== CUSTOMER TRACK PAGE ===== -->
+  <div class="page" id="page-customer">
+    <div class="customer-search">
+      <div class="cs-title">🚛 Track Your Order</div>
+      <div class="cs-sub">Enter your SO number to see loading status</div>
+      <input class="cs-input" type="text" id="custSOInput" placeholder="SO-20001" oninput="this.value=this.value.toUpperCase()">
+      <button class="btn-cr" style="width:100%;" onclick="trackSO()">Track Order</button>
+    </div>
+    <div id="soResultArea" style="margin-top:16px;"></div>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Register Truck Modal -->
+<div class="modal-overlay" id="modalTruck">
+  <div class="modal">
+    <div class="modal-title">🚛 Register New Truck <button class="modal-close" onclick="closeModal('modalTruck')">✕</button></div>
+    <div class="form-group"><label>Truck Plate Number (Omani)</label><input type="text" id="truckPlate" placeholder="e.g. A 12345" style="text-transform:uppercase;"></div>
+    <div class="form-group"><label>Driver Phone (+968)</label><input type="tel" id="truckPhone" placeholder="+968 71189735"></div>
+    <div class="form-group"><label>SO Number</label>
+      <input type="text" id="truckSO" placeholder="SO-20001" oninput="checkSOExists(this.value)">
+      <div class="dup-warn" id="soWarn">⚠️ This SO is already registered in the system!</div>
+    </div>
+    <div class="form-group"><label>Category (Auto-detected from SO products)</label>
+      <select id="truckCat">
+        <option value="Poultry">🐔 Poultry (715/716 > 600 bags)</option>
+        <option value="Ruminant">🐄 Ruminant (941/940 > 350 bags)</option>
+        <option value="Barley">🌾 Barley (706 > 600 bags)</option>
+        <option value="Mix">📦 Mix (Multiple items)</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modalTruck')">Cancel</button>
+      <button class="btn-cr" onclick="registerTruck()">Register Truck</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add SO Modal -->
+<div class="modal-overlay" id="modalSO">
+  <div class="modal">
+    <div class="modal-title">📋 Add Sales Order <button class="modal-close" onclick="closeModal('modalSO')">✕</button></div>
+    <div class="dup-warn" id="soAddWarn">⚠️ This SO number already exists!</div>
+    <div class="form-group"><label>SO Number *</label><input type="text" id="soNum" placeholder="SO-20001" oninput="checkSODup(this.value)"></div>
+    <div class="form-group"><label>Customer Name *</label><input type="text" id="soCustomer" placeholder="Al Rawabi Farm"></div>
+    <div class="form-group"><label>Customer Phone (+968)</label><input type="tel" id="soPhone" placeholder="+968 71189735"></div>
+    <div class="form-group"><label>Source</label>
+      <select id="soSource">
+        <option value="Manual">Manual Entry</option>
+        <option value="ERP">ERP Export</option>
+        <option value="PowerBI">Power BI Export</option>
+      </select>
+    </div>
+    <div class="sec-title" style="margin-top:4px;">Products</div>
+    <div class="product-lines" id="productLines"></div>
+    <button class="btn-add-prod" onclick="addProductLine()">+ Add Product Line</button>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modalSO')">Cancel</button>
+      <button class="btn-cr" onclick="saveSO()">Save SO</button>
+    </div>
+  </div>
+</div>
+
+<!-- WhatsApp Modal -->
+<div class="modal-overlay" id="modalWA">
+  <div class="modal">
+    <div class="modal-title">📱 Contact Customer <button class="modal-close" onclick="closeModal('modalWA')">✕</button></div>
+    <div style="font-size:13px;color:var(--mu);margin-bottom:4px;">Truck: <strong id="waPlate" style="color:var(--tx);"></strong></div>
+    <div style="font-size:13px;color:var(--mu);margin-bottom:16px;">Queue #<strong id="waQNum" style="color:var(--cr);"></strong> — Phone: <strong id="waPhone" style="color:var(--tx);"></strong></div>
+    <div class="wa-options">
+      <div class="wa-btn" onclick="waAction('whatsapp')">
+        <div class="wi">💬</div>
+        <div><div class="wt">Send WhatsApp Message</div><div class="ws">Notify customer their turn is ready</div></div>
+      </div>
+      <div class="wa-btn" onclick="waAction('reschedule')">
+        <div class="wi">🔄</div>
+        <div><div class="wt">Reschedule — No Answer</div><div class="ws">Move to next customer, this truck goes to end of queue</div></div>
+      </div>
+      <div class="wa-btn" onclick="waAction('confirm')">
+        <div class="wi">✅</div>
+        <div><div class="wt">Confirmed — Truck Arriving</div><div class="ws">Mark as confirmed, keep queue position</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="modalImport">
+  <div class="modal">
+    <div class="modal-title">📥 Import from ERP / Power BI <button class="modal-close" onclick="closeModal('modalImport')">✕</button></div>
+    <div style="font-size:12px;color:var(--mu);margin-bottom:16px;">Upload Excel/CSV exported from Dynamics or Power BI. System will auto-detect new SOs, skip existing ones, and flag completed ones.</div>
+    <div style="background:var(--s2);border:2px dashed var(--bd2);border-radius:10px;padding:30px;text-align:center;margin-bottom:16px;">
+      <div style="font-size:30px;margin-bottom:8px;">📂</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Drop Excel/CSV file here</div>
+      <div style="font-size:11px;color:var(--mu);">or click to browse</div>
+      <input type="file" accept=".xlsx,.csv" style="display:none;" id="importFile" onchange="processImport(this)">
+      <button class="btn-ghost" style="margin-top:12px;" onclick="document.getElementById('importFile').click()">Browse File</button>
+    </div>
+    <div id="importResults" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== FIREBASE CONFIG =====
+const firebaseConfig = {
+  apiKey: "AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",
+  authDomain: "ofm-trucks-movemments-harees.firebaseapp.com",
+  databaseURL: "https://ofm-trucks-movemments-harees-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ofm-trucks-movemments-harees",
+  storageBucket: "ofm-trucks-movemments-harees.firebasestorage.app",
+  messagingSenderId: "887529330000",
+  appId: "1:887529330000:web:0aee5473176e88df8b0855"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ===== PRODUCTS LIST =====
+const PRODUCTS = [
+  {code:'715',name:'BROILER STARTER 23% - CRUMBLER',kg:50,cat:'Poultry'},
+  {code:'716',name:'BROILER FINISHER 21% - PELLETS',kg:50,cat:'Poultry'},
+  {code:'709',name:'B.Starter 10 kg',kg:10,cat:'Poultry'},
+  {code:'711',name:'B.Finisher 10 kg',kg:10,cat:'Poultry'},
+  {code:'721',name:'B.Starter Watani 50 kg',kg:50,cat:'Poultry'},
+  {code:'722',name:'B.Finisher Watani 50 kg',kg:50,cat:'Poultry'},
+  {code:'667',name:'Pigeon Feeds - Crumbs 10 kg',kg:10,cat:'Poultry'},
+  {code:'826',name:'Layer 17% Pellets 10 kg',kg:10,cat:'Poultry'},
+  {code:'835',name:'Layer Phase2 Pellets 50 kg',kg:50,cat:'Poultry'},
+  {code:'941',name:'GENERAL RUMINANT FEED 8MM PELLETS',kg:50,cat:'Ruminant'},
+  {code:'940',name:'GENERAL RUMINANT FEED 4MM PELLETS',kg:50,cat:'Ruminant'},
+  {code:'920',name:'DAIRY FEED 18% PELLETS (STANDARD)',kg:50,cat:'Ruminant'},
+  {code:'951',name:'HORSE CUBES 50 kg',kg:50,cat:'Ruminant'},
+  {code:'600',name:'Male Feed 50 kg',kg:50,cat:'Ruminant'},
+  {code:'892',name:'Breeder Layer Phase 2 50 kg',kg:50,cat:'Ruminant'},
+  {code:'706',name:'PREMIUM BARLEY 26 KG',kg:26,cat:'Barley'},
+  {code:'883',name:'Flaked Barley 20 KG',kg:20,cat:'Barley'},
+  {code:'884',name:'WHEAT Flakes 20 KG',kg:20,cat:'Barley'},
+  {code:'751',name:'Wheat Bran / Barley Mix 50 kg',kg:50,cat:'Barley'},
+  {code:'704',name:'Crushed Maize 50 kg',kg:50,cat:'Mix'},
+  {code:'126',name:'SoyaBean Meal 50 kg',kg:50,cat:'Mix'},
+  {code:'708',name:'Mix Grains 30 kg',kg:30,cat:'Mix'},
+  {code:'-',name:'Zaad Al Khair Mix Ratio Premix 45 kg',kg:45,cat:'Mix'},
+];
+
+const POULTRY_CODES = ['715','716','709','711','721','722','667','826','835'];
+const PINS = {admin:'1234',security:'5678',customer:'0000',management:'9999'};
+
+// ===== STATE =====
+let currentRole = 'admin';
+let selectedTruckId = null;
+let soData = [];
+let truckData = [];
+let waCurrentTruck = null;
+
+// ===== LOGIN =====
+function selectRole(r){
+  currentRole = r;
+  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('role-'+r).classList.add('active');
+}
+function doLogin(){
+  const pin = document.getElementById('pinInput').value;
+  if(pin === PINS[currentRole]){
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('appScreen').style.display='block';
+    document.getElementById('rolePill').textContent = currentRole.toUpperCase();
+    setupNavForRole();
+    loadData();
+    updateShiftLabel();
+    toast('Welcome! Logged in as '+currentRole,'');
+  } else {
+    toast('Wrong PIN!','err');
+    document.getElementById('pinInput').value='';
+  }
+}
+function doLogout(){
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('appScreen').style.display='none';
+  document.getElementById('pinInput').value='';
+}
+function setupNavForRole(){
+  const tabs = document.querySelectorAll('.nav-tab');
+  if(currentRole==='customer'){
+    tabs.forEach((t,i)=>{t.style.display=i===3?'block':'none';});
+    showPage('customer');
+  } else if(currentRole==='security'){
+    tabs.forEach((t,i)=>{t.style.display=i===2?'none':'block';});
+    showPage('queue');
+  } else {
+    tabs.forEach(t=>t.style.display='block');
+    showPage('dashboard');
+  }
+}
+function updateShiftLabel(){
+  const h = new Date().getHours();
+  const shift = (h>=6&&h<18)?'Day Shift (06:00–18:00)':'Night Shift (18:00–06:00)';
+  document.getElementById('shiftLabel').textContent = 'Feed Mills — '+shift;
+}
+
+// ===== NAVIGATION =====
+function showPage(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  const map = {dashboard:0,queue:1,so:2,customer:3};
+  if(tabs[map[p]]) tabs[map[p]].classList.add('active');
+  if(p==='so') renderSOTable();
+  if(p==='dashboard') renderDashTable();
+}
+
+// ===== FIREBASE LOAD =====
+function loadData(){
+  db.collection('so_orders').orderBy('createdAt','desc').onSnapshot(snap=>{
+    soData = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderSOTable();
+    renderDashTable();
+    updateStats();
+  });
+  db.collection('trucks').where('status','in',['Parking','Loading']).orderBy('timestamp','asc').onSnapshot(snap=>{
+    truckData = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderTruckQueue();
+    updateStats();
+  });
+}
+
+// ===== STATS =====
+function updateStats(){
+  document.getElementById('stat-queue').textContent = truckData.filter(t=>t.status==='Parking').length;
+  document.getElementById('stat-lines').textContent = truckData.filter(t=>t.status==='Loading').length;
+  document.getElementById('stat-so').textContent = soData.filter(s=>s.status==='Pending').length;
+  document.getElementById('stat-done').textContent = soData.filter(s=>s.status==='Done').length;
+  document.getElementById('queueBadge').textContent = truckData.filter(t=>t.status==='Parking').length;
+}
+
+// ===== TRUCK QUEUE =====
+function renderTruckQueue(){
+  const list = document.getElementById('truckQueue');
+  const parking = truckData.filter(t=>t.status==='Parking');
+  if(!parking.length){list.innerHTML='<div style="text-align:center;color:var(--mu);padding:30px;font-size:12px;">No trucks in queue</div>';return;}
+  list.innerHTML = parking.map((t,i)=>`
+    <div class="truck-card ${selectedTruckId===t.id?'selected':''}" onclick="selectTruck('${t.id}')">
+      <div class="truck-plate">${t.plateNumber||'—'}</div>
+      <span class="cat-badge cat-${t.category?t.category[0]:'M'}">${t.category||'MIX'}</span>
+      <div class="truck-meta"><strong>${t.soNumber||'No SO'}</strong><br>${t.phone||'No phone'}</div>
+      <div class="queue-num">#${i+1}</div>
+      <div style="margin-top:8px;display:flex;gap:6px;">
+        <button class="btn-sm btn-edit" onclick="event.stopPropagation();openWA('${t.id}',${i+1})">📱 Contact</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectTruck(id){
+  selectedTruckId = id;
+  const t = truckData.find(x=>x.id===id);
+  if(!t) return;
+  document.getElementById('selTruck').value = (t.plateNumber||'') + ' — ' + (t.soNumber||'');
+  document.getElementById('selCat').value = t.category||'Mix';
+  renderTruckQueue();
+  toast('Truck selected: '+t.plateNumber,'');
+}
+
+// ===== REGISTER TRUCK =====
+function openRegisterTruck(){openModal('modalTruck');}
+async function registerTruck(){
+  const plate = document.getElementById('truckPlate').value.trim().toUpperCase();
+  const phone = document.getElementById('truckPhone').value.trim();
+  const so = document.getElementById('truckSO').value.trim().toUpperCase();
+  const cat = document.getElementById('truckCat').value;
+  if(!plate||!so){toast('Plate and SO are required!','err');return;}
+  try{
+    await db.collection('trucks').add({
+      plateNumber:plate,phone,soNumber:so,category:cat,
+      status:'Parking',timestamp:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // Update SO status
+    const soDoc = soData.find(s=>s.soNumber===so);
+    if(soDoc) await db.collection('so_orders').doc(soDoc.id).update({status:'Assigned',truckPlate:plate});
+    closeModal('modalTruck');
+    toast('Truck '+plate+' registered!','');
+    document.getElementById('truckPlate').value='';
+    document.getElementById('truckPhone').value='';
+    document.getElementById('truckSO').value='';
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+// ===== LINE ASSIGNMENT =====
+function assignLine(){
+  if(!selectedTruckId){toast('Select a truck first!','err');return;}
+  const line = document.getElementById('lineSelect').value;
+  if(!line){toast('Select a line!','err');return;}
+  const t = truckData.find(x=>x.id===selectedTruckId);
+  if(!t) return;
+  if((line==='C1'||line==='C2')&&t.category!=='Poultry'){
+    toast('❌ C-Mill is POULTRY ONLY! Cannot assign '+t.category,'err');return;
+  }
+  const slot = document.getElementById('slot-'+line);
+  if(slot.classList.contains('occupied')){toast('❌ Line '+line+' is already occupied!','err');return;}
+  // Update Firebase
+  db.collection('trucks').doc(selectedTruckId).update({status:'Loading',loadingLine:line,loadingStart:firebase.firestore.FieldValue.serverTimestamp()});
+  // Update SO
+  const soDoc = soData.find(s=>s.soNumber===t.soNumber);
+  if(soDoc) db.collection('so_orders').doc(soDoc.id).update({status:'Loading',loadingLine:line});
+  // Update UI
+  slot.classList.add('occupied');
+  let m=0,s=0;
+  slot.innerHTML=`<div class="line-name">${line}</div><div class="line-plate">${t.plateNumber}</div><div class="line-prod">${t.soNumber}</div><div class="line-timer" id="timer-${line}">⏱ 00:00</div><div class="line-status">LOADING</div>`;
+  const ti=setInterval(()=>{s++;if(s>=60){s=0;m++;}const el=document.getElementById('timer-'+line);if(el)el.textContent=`⏱ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;else clearInterval(ti);},1000);
+  clearSel();
+  updateStats();
+  toast('✅ Truck '+t.plateNumber+' assigned to Line '+line,'');
+}
+
+function clickLine(line){
+  const slot = document.getElementById('slot-'+line);
+  if(!slot.classList.contains('occupied')) return;
+  if(confirm('Mark Line '+line+' as DONE and dispatch truck?')){
+    // Find truck on this line
+    const t = truckData.find(x=>x.loadingLine===line&&x.status==='Loading');
+    if(t){
+      db.collection('trucks').doc(t.id).update({status:'Dispatched',dispatchTime:firebase.firestore.FieldValue.serverTimestamp()});
+      const soDoc = soData.find(s=>s.soNumber===t.soNumber);
+      if(soDoc) db.collection('so_orders').doc(soDoc.id).update({status:'Done',doneTime:firebase.firestore.FieldValue.serverTimestamp()});
+    }
+    slot.classList.remove('occupied');
+    const isC = (line==='C1'||line==='C2');
+    slot.innerHTML=`${isC?'<div class="res-badge">POULTRY</div>':''}<div class="line-name">${line}</div><div class="line-status">Available</div>`;
+    updateStats();
+    toast('✅ Line '+line+' released — truck dispatched!','');
+  }
+}
+
+function clearSel(){
+  selectedTruckId=null;
+  document.getElementById('selTruck').value='';
+  document.getElementById('selCat').value='';
+  document.getElementById('lineSelect').value='';
+  renderTruckQueue();
+}
+
+// ===== SO MANAGEMENT =====
+function renderSOTable(){
+  const q = (document.getElementById('soSearch')||{}).value||'';
+  const filtered = soData.filter(s=>
+    (s.soNumber||'').toLowerCase().includes(q.toLowerCase())||
+    (s.customer||'').toLowerCase().includes(q.toLowerCase())
+  );
+  const tbody = document.getElementById('soTableBody');
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:30px;">No SOs found</td></tr>';return;}
+  tbody.innerHTML = filtered.map(s=>`
+    <tr>
+      <td><strong>${s.soNumber||'—'}</strong></td>
+      <td>${s.customer||'—'}</td>
+      <td style="font-size:11px;">${s.phone||'—'}</td>
+      <td style="font-size:11px;max-width:200px;">${(s.products||[]).map(p=>`${p.code} × ${p.qty}`).join(', ')||'—'}</td>
+      <td><span class="src-badge src-${(s.source||'M')[0]}">${s.source||'Manual'}</span></td>
+      <td><span class="status-pill sp-${(s.status||'pending').toLowerCase()}">${s.status||'Pending'}</span></td>
+      <td style="display:flex;gap:5px;">
+        ${currentRole==='admin'?`<button class="btn-sm btn-edit" onclick="editSO('${s.id}')">Edit</button><button class="btn-sm btn-del" onclick="deleteSO('${s.id}')">Del</button>`:''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderDashTable(){
+  const tbody = document.getElementById('dashTable');
+  const today = soData.slice(0,20);
+  if(!today.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--mu);padding:30px;">No data today</td></tr>';return;}
+  tbody.innerHTML = today.map(s=>`
+    <tr>
+      <td><strong>${s.soNumber||'—'}</strong></td>
+      <td>${s.customer||'—'}</td>
+      <td><span class="cat-badge cat-${(s.category||'M')[0]}" style="position:static;">${s.category||'Mix'}</span></td>
+      <td style="font-size:11px;">${(s.products||[]).map(p=>p.code).join(', ')||'—'}</td>
+      <td><span class="status-pill sp-${(s.status||'pending').toLowerCase()}">${s.status||'Pending'}</span></td>
+      <td style="font-size:11px;color:var(--mu);">${s.createdAt?new Date(s.createdAt.seconds*1000).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'—'}</td>
+    </tr>
+  `).join('');
+}
+
+// ===== ADD SO =====
+function openAddSO(){
+  document.getElementById('soNum').value='';
+  document.getElementById('soCustomer').value='';
+  document.getElementById('soPhone').value='';
+  document.getElementById('soAddWarn').style.display='none';
+  document.getElementById('productLines').innerHTML='';
+  addProductLine();
+  openModal('modalSO');
+}
+function addProductLine(){
+  const opts = PRODUCTS.map(p=>`<option value="${p.code}">${p.code} — ${p.name}</option>`).join('');
+  const div = document.createElement('div');
+  div.className='prod-line';
+  div.innerHTML=`<select>${opts}</select><input type="number" placeholder="Bags" min="1"><input type="date" value="${new Date().toISOString().split('T')[0]}"><button class="btn-remove-prod" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('productLines').appendChild(div);
+}
+function checkSODup(val){
+  const exists = soData.find(s=>s.soNumber===val.toUpperCase());
+  document.getElementById('soAddWarn').style.display = exists?'block':'none';
+}
+async function saveSO(){
+  const num = document.getElementById('soNum').value.trim().toUpperCase();
+  const cust = document.getElementById('soCustomer').value.trim();
+  const phone = document.getElementById('soPhone').value.trim();
+  const source = document.getElementById('soSource').value;
+  if(!num||!cust){toast('SO Number and Customer are required!','err');return;}
+  if(soData.find(s=>s.soNumber===num)){toast('SO '+num+' already exists!','err');return;}
+  const lines = document.querySelectorAll('#productLines .prod-line');
+  const products = [];
+  lines.forEach(l=>{
+    const sel=l.querySelector('select');
+    const qty=l.querySelectorAll('input')[0];
+    const date=l.querySelectorAll('input')[1];
+    if(sel&&qty&&qty.value) products.push({code:sel.value,name:PRODUCTS.find(p=>p.code===sel.value)?.name||sel.value,qty:parseInt(qty.value),prodDate:date?.value||''});
+  });
+  // Auto-detect category
+  const cat = detectCategory(products);
+  try{
+    await db.collection('so_orders').add({
+      soNumber:num,customer:cust,phone,source,products,category:cat,
+      status:'Pending',createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeModal('modalSO');
+    toast('SO '+num+' saved!','');
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+function detectCategory(products){
+  for(const p of products){
+    if(['715','716','709','711','721','722'].includes(p.code)&&p.qty>600) return 'Poultry';
+    if(['941','940'].includes(p.code)&&p.qty>350) return 'Ruminant';
+    if(['706'].includes(p.code)&&p.qty>600) return 'Barley';
+    if(['883','884'].includes(p.code)&&p.qty>300) return 'Barley';
+  }
+  return 'Mix';
+}
+async function deleteSO(id){
+  if(!confirm('Delete this SO?')) return;
+  await db.collection('so_orders').doc(id).delete();
+  toast('SO deleted','warn');
+}
+function editSO(id){toast('Edit feature — coming in next build!','warn');}
+
+// ===== CUSTOMER TRACK =====
+function trackSO(){
+  const num = document.getElementById('custSOInput').value.trim().toUpperCase();
+  const so = soData.find(s=>s.soNumber===num);
+  const area = document.getElementById('soResultArea');
+  if(!so){area.innerHTML='<div class="so-result-card" style="text-align:center;color:var(--cr);">❌ SO not found. Check the number and try again.</div>';return;}
+  const stages = [
+    {label:'Order Registered',done:true,time:so.createdAt?new Date(so.createdAt.seconds*1000).toLocaleString('en-GB'):''},
+    {label:'Truck Assigned',done:['Assigned','Loading','Done'].includes(so.status),time:so.assignedTime?new Date(so.assignedTime.seconds*1000).toLocaleString('en-GB'):''},
+    {label:'Loading in Progress',done:['Loading','Done'].includes(so.status),active:so.status==='Loading',time:so.loadingLine?'Line: '+so.loadingLine:''},
+    {label:'Fully Loaded & Dispatched',done:so.status==='Done',time:so.doneTime?new Date(so.doneTime.seconds*1000).toLocaleString('en-GB'):''},
+  ];
+  area.innerHTML=`
+    <div class="so-result-card">
+      <div class="so-result-header">
+        <div class="so-result-num">${so.soNumber}</div>
+        <span class="status-pill sp-${(so.status||'pending').toLowerCase()}">${so.status||'Pending'}</span>
+      </div>
+      <div style="font-size:12px;color:var(--mu);margin-bottom:16px;">${so.customer||''}</div>
+      <div class="so-timeline">
+        ${stages.map(st=>`
+          <div class="tl-item">
+            <div class="tl-dot ${st.done?'done':st.active?'active':'pending'}"></div>
+            <div class="tl-label" style="color:${st.done?'var(--tx)':'var(--mu)'};">${st.label}</div>
+            <div class="tl-time">${st.time}</div>
+          </div>
+        `).join('')}
+      </div>
+      ${so.products&&so.products.length?`
+        <div class="so-products">
+          <div style="font-size:11px;font-weight:700;color:var(--mu);margin-bottom:8px;text-transform:uppercase;">Products</div>
+          ${so.products.map(p=>`
+            <div class="so-prod-row">
+              <span>${p.code} — ${p.name||''}</span>
+              <span style="font-weight:700;">${p.qty} bags</span>
+            </div>
+          `).join('')}
+        </div>
+      `:''}
+    </div>
+  `;
+}
+
+// ===== WHATSAPP =====
+function openWA(id,qnum){
+  const t = truckData.find(x=>x.id===id);
+  if(!t) return;
+  waCurrentTruck = t;
+  document.getElementById('waPlate').textContent = t.plateNumber||'—';
+  document.getElementById('waQNum').textContent = qnum;
+  document.getElementById('waPhone').textContent = t.phone||'No phone';
+  openModal('modalWA');
+}
+function waAction(action){
+  if(!waCurrentTruck) return;
+  if(action==='whatsapp'){
+    const phone = (waCurrentTruck.phone||'').replace(/\D/g,'');
+    const msg = encodeURIComponent(`OFM Fleet System: Your truck ${waCurrentTruck.plateNumber} (SO: ${waCurrentTruck.soNumber}) is ready for loading. Please proceed to the gate. شاحنتك جاهزة للتحميل.`);
+    window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
+  } else if(action==='reschedule'){
+    db.collection('trucks').doc(waCurrentTruck.id).update({timestamp:firebase.firestore.FieldValue.serverTimestamp(),rescheduled:true});
+    toast('Truck rescheduled — moved to end of queue','warn');
+  } else if(action==='confirm'){
+    db.collection('trucks').doc(waCurrentTruck.id).update({confirmed:true});
+    toast('Truck confirmed — keeping queue position','');
+  }
+  closeModal('modalWA');
+}
+
+// ===== SO CHECK =====
+function checkSOExists(val){
+  const exists = soData.find(s=>s.soNumber===val.toUpperCase());
+  document.getElementById('soWarn').style.display = exists?'block':'none';
+}
+
+// ===== IMPORT =====
+function openImport(){openModal('modalImport');}
+function processImport(input){
+  const file = input.files[0];
+  if(!file) return;
+  const res = document.getElementById('importResults');
+  res.style.display='block';
+  res.innerHTML='<div style="color:var(--mu);font-size:12px;">📊 Processing file... (Connect real parser for production)</div>';
+  toast('File received — manual review required for now','warn');
+}
+
+// ===== MODAL HELPERS =====
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
+});
+
+// ===== TOAST =====
+function toast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+(type||'')+' show';
+  setTimeout(()=>t.className='toast',3500);
+}
+</script>
+</body>
+</html>
