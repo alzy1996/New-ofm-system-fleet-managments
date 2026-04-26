@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OFM Smart Fleet</title>
+
+<!-- ══ PWA META ══ -->
+<meta name="theme-color" content="#C0392B"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="OFM Fleet"/>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="apple-touch-icon" href="https://placehold.co/192x192/C0392B/ffffff?text=OFM"/>
+
+<!-- ══ FIREBASE SDKs ══ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cr:#C0392B;--cr-d:#96281B;--cr-l:#E74C3C;
+  --bg:#F4F5F9;--white:#fff;--text:#0F1117;--muted:#7B8299;--border:#E4E7F0;
+  --green:#1DB06A;--orange:#E8930A;--blue:#2D7DD2;--purple:#7C3AED;
+  --sh:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);
+  --sh-lg:0 8px 40px rgba(0,0,0,0.12);
+}
+html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
+#loginPage{position:fixed;inset:0;z-index:1000;display:flex;background:#0a0a0f;}
+.lp-left{width:52%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 72px;position:relative;}
+.lp-left::after{content:'';position:absolute;top:0;right:0;bottom:0;width:1px;background:linear-gradient(to bottom,transparent,#E4E7F0 20%,#E4E7F0 80%,transparent);}
+.lp-logo-wrap{display:flex;align-items:center;gap:12px;margin-bottom:36px;}
+.lp-mark{width:44px;height:44px;background:var(--cr);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px;letter-spacing:0.5px;flex-shrink:0;}
+.lp-brand{font-size:20px;font-weight:800;color:var(--text);}
+.lp-tagline{font-size:12px;color:var(--muted);line-height:1.5;margin-top:1px;}
+.lp-form{width:100%;max-width:320px;}
+.lp-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.lp-sub{font-size:13px;color:var(--muted);margin-bottom:32px;}
+.fg{margin-bottom:16px;}
+.fg label{display:block;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px;}
+.fg input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:#FAFBFE;outline:none;transition:border-color .18s,box-shadow .18s;}
+.fg input:focus{border-color:var(--cr);background:#fff;box-shadow:0 0 0 3px rgba(192,57,43,0.09);}
+.btn-login{width:100%;padding:13px;background:var(--cr);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all .18s;font-family:'Inter',sans-serif;letter-spacing:0.2px;}
+.btn-login:hover{background:var(--cr-d);transform:translateY(-1px);box-shadow:0 6px 20px rgba(192,57,43,0.3);}
+.login-err{color:var(--cr);font-size:12px;font-weight:600;margin-top:10px;text-align:center;display:none;}
+.lp-right{flex:1;position:relative;overflow:hidden;}
+.lp-right img{width:100%;height:100%;object-fit:cover;opacity:0.45;filter:saturate(1.3) brightness(0.9);}
+.lp-overlay{position:absolute;inset:0;background:linear-gradient(160deg,rgba(192,57,43,0.15),rgba(8,8,16,0.7));display:flex;flex-direction:column;justify-content:flex-end;padding:52px;}
+.lp-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:6px 14px;margin-bottom:20px;width:fit-content;backdrop-filter:blur(8px);}
+.lp-dot{width:6px;height:6px;background:#1DB06A;border-radius:50%;animation:pulse 1.5s infinite;}
+.lp-badge span{font-size:11px;color:rgba(255,255,255,0.9);font-weight:600;letter-spacing:0.4px;}
+.lp-h{font-size:30px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:10px;}
+.lp-p{font-size:13px;color:rgba(255,255,255,0.6);line-height:1.7;max-width:340px;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.5);}}
+#app{display:none;height:100vh;overflow:hidden;}
+.shell{display:flex;height:100vh;}
+.sb{width:232px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;flex-shrink:0;}
+.sb-head{padding:18px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.sb-mark{width:32px;height:32px;background:var(--cr);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:12px;flex-shrink:0;}
+.sb-brand{font-size:14px;font-weight:800;color:var(--text);}
+.sb-ver{font-size:10px;color:var(--muted);}
+.sb-section{padding:16px 14px 6px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase;}
+.nav-i{display:flex;align-items:center;gap:9px;padding:9px 14px;margin:1px 8px;border-radius:8px;cursor:pointer;transition:all .15s;font-size:12.5px;font-weight:500;color:var(--muted);}
+.nav-i:hover{background:#F3F4F8;color:var(--text);}
+.nav-i.active{background:rgba(192,57,43,0.07);color:var(--cr);font-weight:700;}
+.nav-ico{font-size:15px;width:18px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--cr);color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;}
+.sb-foot{margin-top:auto;padding:14px;border-top:1px solid var(--border);}
+.u-card{display:flex;align-items:center;gap:10px;}
+.u-av{width:32px;height:32px;border-radius:50%;background:var(--cr);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;flex-shrink:0;}
+.u-name{font-size:12.5px;font-weight:700;color:var(--text);}
+.u-role{font-size:10.5px;color:var(--muted);}
+.btn-out{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:4px;border-radius:6px;transition:color .15s;}
+.btn-out:hover{color:var(--cr);}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:13px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.tb-title{font-size:17px;font-weight:800;color:var(--text);}
+.tb-sub{font-size:11.5px;color:var(--muted);margin-top:1px;}
+.live-pill{display:flex;align-items:center;gap:5px;background:rgba(29,176,106,0.09);border:1px solid rgba(29,176,106,0.22);color:var(--green);padding:5px 11px;border-radius:20px;font-size:11px;font-weight:700;}
+.content{padding:20px 24px;flex:1;}
+.sec{display:none;}
+.sec.active{display:block;}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.sc{background:var(--white);border-radius:12px;padding:18px;box-shadow:var(--sh);border:1px solid var(--border);}
+.sc-ico{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:10px;}
+.sc-lbl{font-size:11px;color:var(--muted);font-weight:600;}
+.sc-val{font-size:26px;font-weight:800;color:var(--text);}
+.sc-ch{font-size:10.5px;font-weight:600;}
+.sc-ch.up{color:var(--green);}
+.sc-ch.dn{color:var(--cr);}
+.card{background:var(--white);border-radius:12px;padding:18px;box-shadow:var(--sh);border:1px solid var(--border);margin-bottom:14px;}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.ct{font-size:13px;font-weight:700;color:var(--text);}
+.q-layout{display:grid;grid-template-columns:290px 1fr;gap:14px;}
+.q-list{display:flex;flex-direction:column;gap:7px;max-height:calc(100vh - 210px);overflow-y:auto;padding-right:4px;}
+.q-list::-webkit-scrollbar{width:4px;}
+.q-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.tc{background:var(--white);border:1.5px solid var(--border);border-radius:11px;padding:12px 14px;cursor:pointer;transition:all .18s;}
+.tc:hover{border-color:var(--cr);box-shadow:0 2px 12px rgba(192,57,43,0.08);}
+.tc.sel{border-color:var(--cr);background:rgba(192,57,43,0.025);}
+.plate{background:#F1C40F;color:#000;font-weight:900;font-size:11.5px;padding:3px 9px;border-radius:5px;display:inline-block;border:2px solid #d4a800;letter-spacing:1.2px;margin-bottom:7px;}
+.roll-n{float:right;background:var(--cr);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;}
+.cat-b{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;margin-top:5px;}
+.c-poultry{background:rgba(45,125,210,0.1);color:#1a5fa0;}
+.c-ruminant{background:rgba(29,176,106,0.1);color:#0e7a4a;}
+.c-barley{background:rgba(232,147,10,0.1);color:#a06003;}
+.c-mix{background:rgba(192,57,43,0.1);color:var(--cr);}
+.lines-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px;}
+.ls{border:2px dashed var(--border);border-radius:11px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .22s;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:var(--white);}
+.ls:hover{border-color:var(--cr);background:rgba(192,57,43,0.025);}
+.ls.occ{border-style:solid;border-color:var(--green);background:rgba(29,176,106,0.04);}
+.ls.restr{border-color:rgba(45,125,210,0.3);background:rgba(45,125,210,0.025);}
+.ln{font-size:18px;font-weight:900;color:var(--text);}
+.lstat{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;}
+.lplate{background:#F1C40F;color:#000;font-weight:800;font-size:9.5px;padding:2px 6px;border-radius:4px;border:1.5px solid #d4a800;}
+.lprod{font-size:9.5px;color:var(--muted);max-width:100px;line-height:1.3;}
+.ltimer{font-size:9.5px;color:var(--orange);font-weight:700;}
+.rbadge{font-size:8.5px;background:rgba(45,125,210,0.12);color:#1a5fa0;padding:1px 5px;border-radius:4px;font-weight:700;}
+.ap{background:var(--white);border-radius:12px;padding:16px;box-shadow:var(--sh);border:1px solid var(--border);margin-bottom:14px;}
+.ap-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;}
+.af{display:flex;flex-direction:column;gap:4px;flex:1;min-width:110px;}
+.af label{font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:0.5px;text-transform:uppercase;}
+.af input,.af select{padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:'Inter',sans-serif;color:var(--text);background:#FAFBFE;outline:none;transition:border-color .15s;}
+.af input:focus,.af select:focus{border-color:var(--cr);}
+.so-tbl{width:100%;border-collapse:collapse;}
+.so-tbl th{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+.so-tbl td{padding:11px 12px;border-bottom:1px solid var(--border);font-size:12.5px;vertical-align:middle;}
+.so-tbl tr:hover td{background:#FAFBFE;}
+.sb-pill{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:16px;}
+.sp-pending{background:rgba(232,147,10,0.1);color:var(--orange);}
+.sp-assigned{background:rgba(45,125,210,0.1);color:var(--blue);}
+.sp-loading{background:rgba(124,58,237,0.1);color:var(--purple);}
+.sp-done{background:rgba(29,176,106,0.1);color:var(--green);}
+.src-b{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;}
+.src-m{background:#F0F2F7;color:var(--muted);}
+.src-e{background:rgba(45,125,210,0.09);color:var(--blue);}
+.inv-g{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.inv-pc{background:var(--white);border-radius:12px;padding:16px;box-shadow:var(--sh);border:1px solid var(--border);}
+.inv-pn{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.inv-tot{font-size:20px;font-weight:800;color:var(--cr);}
+.inv-tl{font-size:10.5px;color:var(--muted);margin-bottom:10px;}
+.inv-dr{display:flex;gap:7px;align-items:center;padding:7px;background:#FAFBFE;border-radius:7px;border:1px solid var(--border);margin-bottom:5px;}
+.inv-dl{font-size:10.5px;color:var(--muted);font-weight:600;min-width:76px;}
+.inv-dq{font-size:12px;font-weight:700;color:var(--text);}
+.inv-db{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(29,176,106,0.09);color:var(--green);}
+.inv-db.ff{background:rgba(192,57,43,0.09);color:var(--cr);}
+.inv-add{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap;}
+.inv-add input{padding:6px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s;}
+.inv-add input:focus{border-color:var(--cr);}
+.btn{padding:7px 14px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;border:none;transition:all .17s;font-family:'Inter',sans-serif;}
+.btn-p{background:var(--cr);color:#fff;box-shadow:0 2px 8px rgba(192,57,43,0.2);}
+.btn-p:hover{background:var(--cr-d);transform:translateY(-1px);}
+.btn-s{background:var(--bg);color:var(--text);border:1px solid var(--border);}
+.btn-s:hover{border-color:var(--cr);color:var(--cr);}
+.btn-g{background:var(--green);color:#fff;}
+.btn-g:hover{background:#189e5e;}
+.btn-wa{background:#25D366;color:#fff;display:inline-flex;align-items:center;gap:4px;}
+.btn-wa:hover{background:#1eb859;}
+.btn-sm{padding:4px 9px;font-size:10.5px;}
+.btn-xs{padding:3px 7px;font-size:10px;}
+.mgmt-g{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.pb{height:6px;background:#EEF0F7;border-radius:3px;overflow:hidden;margin-top:5px;}
+.pf{height:100%;border-radius:3px;transition:width .5s;}
+.sec-view{max-width:560px;margin:0 auto;}
+.tok-disp{background:linear-gradient(135deg,var(--cr),var(--cr-d));color:#fff;border-radius:14px;padding:20px;text-align:center;margin-bottom:14px;}
+.tok-n{font-size:44px;font-weight:900;letter-spacing:4px;}
+.role-disp{background:var(--white);border-radius:14px;padding:22px;box-shadow:var(--sh);border:1px solid var(--border);margin-bottom:14px;}
+.role-nb{font-size:64px;font-weight:900;color:var(--cr);text-align:center;line-height:1;margin:14px 0;}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.mo.open{display:flex;}
+.md{background:var(--white);border-radius:16px;padding:26px;width:90%;max-width:540px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.18);}
+.md-t{font-size:16px;font-weight:800;margin-bottom:18px;color:var(--text);}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.mfg{margin-bottom:10px;}
+.mfg label{font-size:10.5px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;letter-spacing:0.5px;text-transform:uppercase;}
+.mfg input,.mfg select,.mfg textarea{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:'Inter',sans-serif;color:var(--text);background:#FAFBFE;outline:none;transition:all .15s;}
+.mfg input:focus,.mfg select:focus{border-color:var(--cr);background:#fff;}
+.md-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border);}
+.pl{display:grid;grid-template-columns:2fr 1fr auto;gap:7px;align-items:center;padding:7px;background:#FAFBFE;border-radius:7px;margin-bottom:5px;border:1px solid var(--border);}
+.btn-rl{background:none;border:none;color:var(--cr);cursor:pointer;font-size:15px;padding:1px 5px;}
+.fipo{background:rgba(45,125,210,0.04);border:1.5px solid rgba(45,125,210,0.18);border-radius:9px;padding:10px;margin-top:7px;}
+.fipo-t{font-size:10.5px;font-weight:700;color:var(--blue);margin-bottom:7px;}
+.fipo-r{display:flex;gap:5px;align-items:center;margin-bottom:5px;flex-wrap:wrap;}
+.fipo-r input{padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:10.5px;font-family:'Inter',sans-serif;background:#fff;outline:none;}
+.fipo-r input:focus{border-color:var(--blue);}
+.fipo-warn{font-size:10px;color:var(--cr);font-weight:700;margin-top:3px;}
+.fipo-ok{font-size:10px;color:var(--green);font-weight:700;margin-top:3px;}
+.trk-card{background:var(--white);border-radius:14px;padding:26px;box-shadow:var(--sh);border:1px solid var(--border);max-width:580px;margin:0 auto;}
+.tl{margin-top:18px;}
+.tl-item{display:flex;gap:12px;margin-bottom:18px;}
+.tl-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px;}
+.td-done{background:rgba(29,176,106,0.12);color:var(--green);}
+.td-act{background:rgba(192,57,43,0.12);color:var(--cr);}
+.td-pend{background:#F0F2F7;color:var(--muted);}
+.tl-ti{font-size:12.5px;font-weight:700;color:var(--text);}
+.tl-tm{font-size:10.5px;color:var(--muted);margin-top:1px;}
+.tl-det{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.5;}
+.au-tag{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:4px;background:rgba(124,58,237,0.09);color:var(--purple);margin-left:5px;}
+.toast{position:fixed;bottom:22px;right:22px;padding:11px 18px;border-radius:9px;font-size:12.5px;font-weight:600;color:#fff;transform:translateY(70px);opacity:0;transition:all .28s;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,0.18);}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{background:var(--green);}
+.toast.error{background:var(--cr);}
+.toast.info{background:var(--blue);}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="loginPage">
+  <div class="lp-left">
+    <div class="lp-form">
+      <div class="lp-logo-wrap">
+        <div class="lp-mark">OFM</div>
+        <div><div class="lp-brand">OFM Smart Fleet</div><div class="lp-tagline">Oman Flour Mills · Fleet Management</div></div>
+      </div>
+      <div class="lp-title">Welcome back</div>
+      <div class="lp-sub">Sign in with your credentials to continue</div>
+      <div class="fg"><label>Username</label><input id="lu" type="text" placeholder="Enter username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="fg"><label>Password</label><input id="lp" type="password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn-login" onclick="doLogin()">Sign In →</button>
+      <div class="login-err" id="lerr">❌ Invalid credentials. Try again.</div>
+    </div>
+  </div>
+  <div class="lp-right">
+    <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&q=80" alt="">
+    <div class="lp-overlay">
+      <div class="lp-badge"><div class="lp-dot"></div><span>LIVE SYSTEM · OMAN FLOUR MILLS</span></div>
+      <div class="lp-h">Smart Fleet Management<br>for Oman Flour Mills</div>
+      <div class="lp-p">Real-time truck tracking, loading line control, SO management &amp; FIFO inventory — all in one system.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <div class="shell">
+    <div class="sb">
+      <div class="sb-head">
+        <div class="sb-mark">OFM</div>
+        <div><div class="sb-brand">Fleet System</div><div class="sb-ver">v4.0 · Live</div></div>
+      </div>
+      <div id="sbNav"></div>
+      <div class="sb-foot">
+        <div class="u-card">
+          <div class="u-av" id="uAv">S</div>
+          <div><div class="u-name" id="uName">Samih Ahmed</div><div class="u-role" id="uRole">Admin</div></div>
+          <button class="btn-out" onclick="logout()" title="Logout">⏻</button>
+        </div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="topbar">
+        <div><div class="tb-title" id="pgTitle">Dashboard</div><div class="tb-sub" id="pgDate"></div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="live-pill"><div class="lp-dot"></div>LIVE</div>
+        </div>
+      </div>
+      <div class="content">
+
+        <!-- DASHBOARD -->
+        <div class="sec active" id="sec-dashboard">
+          <div class="stats">
+            <div class="sc"><div class="sc-ico" style="background:rgba(192,57,43,.09);">🚛</div><div class="sc-lbl">Queue Waiting</div><div class="sc-val" id="d-queue">5</div><div class="sc-ch up">↑ 2 since morning</div></div>
+            <div class="sc"><div class="sc-ico" style="background:rgba(29,176,106,.09);">📦</div><div class="sc-lbl">Lines Active</div><div class="sc-val" id="d-lines">3</div><div class="sc-ch up">of 13 total</div></div>
+            <div class="sc"><div class="sc-ico" style="background:rgba(45,125,210,.09);">📋</div><div class="sc-lbl">Pending SOs</div><div class="sc-val" id="d-sos">8</div><div class="sc-ch dn">↓ 3 loaded today</div></div>
+            <div class="sc"><div class="sc-ico" style="background:rgba(232,147,10,.09);">✅</div><div class="sc-lbl">Dispatched Today</div><div class="sc-val">12</div><div class="sc-ch up">↑ 4 vs yesterday</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="card">
+              <div class="ch"><div class="ct">📊 Loading Activity</div><span style="font-size:10.5px;color:var(--muted)">Today</span></div>
+              <div style="display:flex;flex-direction:column;gap:9px;" id="dashActivity"></div>
+            </div>
+            <div class="card">
+              <div class="ch"><div class="ct">🏭 Line Status</div></div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;" id="miniLines"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:0;">
+            <div class="ch"><div class="ct">📋 Recent Activity</div></div>
+            <div id="actFeed" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+        </div>
+
+        <!-- QUEUE & LINES -->
+        <div class="sec" id="sec-queue">
+          <div class="ap">
+            <div style="font-size:12.5px;font-weight:700;color:var(--cr);margin-bottom:12px;">⚡ Assign Truck to Loading Line</div>
+            <div class="ap-row">
+              <div class="af"><label>Selected Truck</label><input type="text" id="selT" placeholder="Click truck from queue..." readonly></div>
+              <div class="af"><label>Category</label><input type="text" id="selC" placeholder="Auto-detected..." readonly></div>
+              <div class="af"><label>Assign to Line</label>
+                <select id="lineSel">
+                  <option value="">-- Select Line --</option>
+                  <optgroup label="Main Building">
+                    <option>D1</option><option>D2</option><option>R1</option><option>R2</option>
+                    <option>P4</option><option>Red</option><option>D5</option>
+                    <option>FL1</option><option>FL2</option><option>FL3</option><option>FL4</option>
+                  </optgroup>
+                  <optgroup label="C-Mill (Poultry Only 🐔)">
+                    <option>C1</option><option>C2</option>
+                  </optgroup>
+                </select>
+              </div>
+              <button class="btn btn-p" onclick="assignLine()">Assign ✓</button>
+              <button class="btn btn-s" onclick="clearSel()">Clear</button>
+            </div>
+          </div>
+          <div class="q-layout">
+            <div>
+              <div class="card" style="padding:13px;">
+                <div class="ch" style="margin-bottom:9px;"><div class="ct">🚛 Truck Queue</div><span class="nav-badge" id="qBadge">5</span></div>
+                <div class="q-list" id="truckQ"></div>
+              </div>
+            </div>
+            <div>
+              <div class="card" style="padding:14px;margin-bottom:12px;">
+                <div class="ct" style="margin-bottom:10px;">🏭 Main Building Lines</div>
+                <div class="lines-g" id="mainLines"></div>
+              </div>
+              <div class="card" style="padding:14px;">
+                <div class="ct" style="margin-bottom:10px;">🐔 C-Mill (Poultry Only)</div>
+                <div class="lines-g" id="cmLines"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SO MANAGEMENT -->
+        <div class="sec" id="sec-so">
+          <div style="display:flex;gap:6px;margin-bottom:14px;align-items:center;flex-wrap:wrap;">
+            <div style="display:flex;gap:4px;background:#F0F2F7;padding:3px;border-radius:8px;">
+              <div id="soTab-list" style="padding:6px 14px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;background:var(--cr);color:#fff;" onclick="showSOTab('list')">SO List</div>
+              <div id="soTab-forecast" style="padding:6px 14px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--muted);" onclick="showSOTab('forecast')">📅 Forecast</div>
+            </div>
+            <button class="btn btn-p" onclick="openNewSO()">+ New SO</button>
+            <button class="btn btn-s" onclick="openImport()">📤 Import ERP</button>
+            <div style="margin-left:auto;font-size:11px;color:var(--muted);">Sorted: Oldest Release Date → FIFO</div>
+          </div>
+          <div id="soView-list">
+            <div class="card" style="padding:0;overflow:hidden;">
+              <table class="so-tbl">
+                <thead><tr><th>SO #</th><th>Customer</th><th>Products</th><th>Release Date</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead>
+                <tbody id="soTbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="soView-forecast" style="display:none;">
+            <div class="card">
+              <div class="ch"><div class="ct">📅 30-Day SO Forecast</div><span style="font-size:11px;color:var(--muted);">Click a day to view SOs</span></div>
+              <div id="forecastGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:7px;"></div>
+            </div>
+            <div id="forecastDetail" style="display:none;" class="card">
+              <div class="ch"><div class="ct" id="forecastDetailTitle">SOs for date</div></div>
+              <table class="so-tbl"><thead><tr><th>SO #</th><th>Customer</th><th>Products</th><th>Status</th><th>Confirmed</th></tr></thead><tbody id="forecastDetailBody"></tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <!-- INVENTORY -->
+        <div class="sec" id="sec-inventory">
+          <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
+            <div style="font-size:15px;font-weight:800;">📦 Physical Stock Inventory</div>
+            <div style="margin-left:auto;font-size:11px;color:var(--muted);">Stock reduces on confirmed loading only</div>
+          </div>
+          <div style="background:rgba(232,147,10,.07);border:1px solid rgba(232,147,10,.22);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:var(--orange);font-weight:600;">
+            ⚠️ FIFO Rule: Always load the OLDEST production date first. System warns on violation.
+          </div>
+          <div class="inv-g" id="invGrid"></div>
+        </div>
+
+        <!-- MANAGEMENT -->
+        <div class="sec" id="sec-management">
+          <div class="stats">
+            <div class="sc"><div class="sc-ico" style="background:rgba(192,57,43,.09);">📋</div><div class="sc-lbl">Total SOs Today</div><div class="sc-val">15</div><div class="sc-ch up">↑ 3 vs yesterday</div></div>
+            <div class="sc"><div class="sc-ico" style="background:rgba(29,176,106,.09);">✅</div><div class="sc-lbl">Completed</div><div class="sc-val">12</div><div class="sc-ch up">80% rate</div></div>
+            <div class="sc"><div class="sc-ico" style="background:rgba(232,147,10,.09);">⏳</div><div class="sc-lbl">Pending</div><div class="sc-val">3</div><div class="sc-ch dn">2 overdue</div></div>
+            <div class="sc"><div class="sc-ico" style="background:rgba(45,125,210,.09);">⏱️</div><div class="sc-lbl">Avg Load Time</div><div class="sc-val">47m</div><div class="sc-ch up">↓ 8m faster</div></div>
+          </div>
+          <div class="mgmt-g">
+            <div class="card">
+              <div class="ch"><div class="ct">📊 Queue Roll Confirmation</div></div>
+              <table class="so-tbl"><thead><tr><th>Roll #</th><th>SO</th><th>Customer</th><th>Status</th><th>Confirmed</th></tr></thead><tbody id="mgmtRolls"></tbody></table>
+            </div>
+            <div class="card">
+              <div class="ch"><div class="ct">🏭 Line Utilization</div></div>
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <div><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px;"><span>D1</span><span style="font-weight:700;color:var(--green)">BUSY</span></div><div class="pb"><div class="pf" style="width:75%;background:var(--green)"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px;"><span>R1</span><span style="font-weight:700;color:var(--green)">BUSY</span></div><div class="pb"><div class="pf" style="width:40%;background:var(--green)"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px;"><span>D5</span><span style="font-weight:700;color:var(--orange)">LONG</span></div><div class="pb"><div class="pf" style="width:90%;background:var(--orange)"></div></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><div class="ct">📅 Daily Archive</div></div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;">
+              <div style="padding:9px 14px;background:rgba(192,57,43,.07);border:1.5px solid var(--cr);border-radius:8px;font-size:11.5px;font-weight:700;color:var(--cr);cursor:pointer;">Today — Apr 26</div>
+              <div style="padding:9px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:11.5px;font-weight:600;color:var(--muted);cursor:pointer;">Apr 25 · 18 trucks</div>
+              <div style="padding:9px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:11.5px;font-weight:600;color:var(--muted);cursor:pointer;">Apr 24 · 22 trucks</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECURITY -->
+        <div class="sec" id="sec-security">
+          <div class="sec-view">
+            <div class="tok-disp">
+              <div style="font-size:12px;font-weight:700;opacity:.8;margin-bottom:7px;">🛡️ SECURITY GATE — READ ONLY</div>
+              <div class="tok-n">🎫 TOKEN</div>
+              <div style="font-size:11px;opacity:.75;margin-top:3px;">Valid for this shift only</div>
+            </div>
+            <div class="role-disp">
+              <div style="text-align:center;font-size:11px;color:var(--muted);font-weight:600;">NEXT TO ENTER — ROLL NUMBER</div>
+              <div class="role-nb">#1</div>
+              <div style="text-align:center;font-size:12px;color:var(--muted);">Al Rawabi Farms · SO-19998</div>
+              <div style="margin-top:14px;padding:10px;background:#FAFBFE;border-radius:9px;border:1px solid var(--border);text-align:center;">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">TRUCK PLATE</div>
+                <div class="plate" style="font-size:16px;padding:5px 14px;">A 12345</div>
+              </div>
+              <div style="margin-top:10px;padding:10px;background:rgba(29,176,106,.06);border-radius:9px;border:1px solid rgba(29,176,106,.2);text-align:center;">
+                <div style="font-size:13px;font-weight:700;color:var(--green);">✅ Confirmed — Authorized to Enter</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="ct" style="margin-bottom:10px;">📋 Queue Overview (View Only)</div>
+              <table class="so-tbl"><thead><tr><th>Roll #</th><th>Plate</th><th>SO</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td><strong style="color:var(--cr)">#1</strong></td><td><span class="plate" style="font-size:9.5px;padding:1px 5px;">A 12345</span></td><td>SO-19998</td><td><span class="sb-pill sp-pending">⏳ Waiting</span></td></tr>
+                <tr><td><strong>#2</strong></td><td><span class="plate" style="font-size:9.5px;padding:1px 5px;">B 67890</span></td><td>SO-20001</td><td><span class="sb-pill sp-assigned">🚛 Assigned</span></td></tr>
+                <tr><td><strong>#3</strong></td><td><span class="plate" style="font-size:9.5px;padding:1px 5px;">C 11111</span></td><td>SO-20002</td><td><span class="sb-pill sp-loading">📦 Loading</span></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <!-- CUSTOMER -->
+        <div class="sec" id="sec-customer">
+          <div class="trk-card">
+            <div style="font-size:17px;font-weight:800;margin-bottom:5px;">🚛 Track Your Order</div>
+            <div style="font-size:12.5px;color:var(--muted);margin-bottom:18px;">Enter your SO number to see real-time status</div>
+            <div style="display:flex;gap:9px;margin-bottom:22px;">
+              <input id="trkIn" type="text" placeholder="e.g. SO-20001" style="flex:1;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='var(--cr)'" onblur="this.style.borderColor='var(--border)'">
+              <button class="btn btn-p" onclick="trackSO()">Track →</button>
+            </div>
+            <div id="trkResult" style="display:none;">
+              <div style="padding:14px;background:rgba(192,57,43,.04);border-radius:10px;border:1px solid rgba(192,57,43,.13);margin-bottom:14px;">
+                <div style="font-size:12.5px;font-weight:700;">SO-20001 — Gulf Poultry Co.</div>
+                <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">715 - Broiler Starter × 800 bags</div>
+                <div style="margin-top:7px;"><span class="sb-pill sp-assigned">🚛 Assigned to Line D1</span></div>
+              </div>
+              <div class="tl">
+                <div class="tl-item"><div class="tl-dot td-done">✓</div><div><div class="tl-ti">SO Registered</div><div class="tl-tm">Apr 22, 2026 · 07:30</div><div class="tl-det">Order received. 800 bags Broiler Starter.</div></div></div>
+                <div class="tl-item"><div class="tl-dot td-done">✓</div><div><div class="tl-ti">Queue Confirmed</div><div class="tl-tm">Apr 26, 2026 · 08:32</div><div class="tl-det">Roll #2 assigned. Confirmed via WhatsApp.</div></div></div>
+                <div class="tl-item"><div class="tl-dot td-act">→</div><div><div class="tl-ti">Loading in Progress</div><div class="tl-tm">Now — Line D1</div><div class="tl-det">Estimated completion: 10:00</div></div></div>
+                <div class="tl-item"><div class="tl-dot td-pend">○</div><div><div class="tl-ti">Dispatch</div><div class="tl-tm">Pending</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODALS ══ -->
+<div class="mo" id="newSOModal">
+  <div class="md">
+    <div class="md-t">📋 Register New Sales Order</div>
+    <div class="fr">
+      <div class="mfg"><label>SO Number *</label><input type="text" id="soNum" placeholder="e.g. SO-20010"></div>
+      <div class="mfg"><label>Release Date *</label><input type="date" id="soDate"></div>
+    </div>
+    <div class="fr">
+      <div class="mfg"><label>Customer Name *</label><input type="text" id="soCust" placeholder="Customer name"></div>
+      <div class="mfg"><label>WhatsApp (+968) *</label><input type="text" id="soPhone" placeholder="+968 XXXXXXXX"></div>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;color:var(--muted);margin-bottom:7px;letter-spacing:.5px;text-transform:uppercase;">Product Lines</div>
+    <div id="prodLines"></div>
+    <button class="btn btn-s btn-sm" onclick="addPL()" style="margin-top:7px;">+ Add Product Line</button>
+    <div style="margin-top:10px;padding:9px;background:rgba(232,147,10,.07);border-radius:7px;border:1px solid rgba(232,147,10,.2);font-size:10.5px;color:var(--orange);">
+      ⚠️ Production dates entered during loading. FIFO applied automatically.
+    </div>
+    <div class="md-foot">
+      <button class="btn btn-s" onclick="closeM('newSOModal')">Cancel</button>
+      <button class="btn btn-p" onclick="saveSO()">Save SO ✓</button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="editSOModal">
+  <div class="md">
+    <div class="md-t">✏️ Edit Sales Order</div>
+    <div class="fr">
+      <div class="mfg"><label>SO Number</label><input type="text" id="eSoNum" readonly style="background:#F0F2F7;"></div>
+      <div class="mfg"><label>Release Date</label><input type="date" id="eSoDate"></div>
+    </div>
+    <div class="fr">
+      <div class="mfg"><label>Customer Name</label><input type="text" id="eSoCust"></div>
+      <div class="mfg"><label>WhatsApp</label><input type="text" id="eSoPhone"></div>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;color:var(--muted);margin-bottom:7px;text-transform:uppercase;">Product Lines</div>
+    <div id="eProdLines"></div>
+    <button class="btn btn-s btn-sm" onclick="addEPL()" style="margin-top:7px;">+ Add Product Line</button>
+    <div class="md-foot">
+      <button class="btn btn-s" onclick="closeM('editSOModal')">Cancel</button>
+      <button class="btn btn-p" onclick="saveEditSO()">Save Changes ✓</button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="reschedModal">
+  <div class="md" style="max-width:360px;">
+    <div class="md-t">🔄 Reschedule SO</div>
+    <input type="hidden" id="reschedSOIdx">
+    <div class="mfg"><label>SO Number</label><input type="text" id="reschedSONum" readonly style="background:#F0F2F7;"></div>
+    <div class="mfg"><label>New Scheduled Date *</label><input type="date" id="reschedDate"></div>
+    <div class="mfg"><label>Reason (optional)</label><input type="text" id="reschedReason" placeholder="e.g. No answer, Customer request..."></div>
+    <div class="md-foot">
+      <button class="btn btn-s" onclick="closeM('reschedModal')">Cancel</button>
+      <button class="btn btn-p" onclick="confirmReschedule()">Reschedule ✓</button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="waModal">
+  <div class="md" style="max-width:400px;">
+    <div class="md-t">💬 WhatsApp Confirmation</div>
+    <div style="padding:12px;background:#F7F8FC;border-radius:9px;border:1px solid var(--border);margin-bottom:14px;font-size:12.5px;line-height:1.8;" id="waMsg"></div>
+    <div style="font-size:11.5px;color:var(--muted);margin-bottom:14px;">Click Open WhatsApp to send, or manually confirm below.</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;">
+      <button class="btn btn-wa" onclick="openWA()">📱 Open WhatsApp</button>
+      <button class="btn btn-g" onclick="manualConfirm()">✅ Manual Confirm</button>
+      <button class="btn btn-s" onclick="reschedule()">🔄 Reschedule</button>
+      <button class="btn btn-s" onclick="closeM('waModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="importModal">
+  <div class="md" style="max-width:420px;">
+    <div class="md-t">📤 Import from ERP / Power BI</div>
+    <div style="border:2px dashed var(--border);border-radius:11px;padding:30px;text-align:center;margin-bottom:14px;cursor:pointer;" onmouseover="this.style.borderColor='var(--cr)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size:28px;margin-bottom:7px;">📁</div>
+      <div style="font-size:13.5px;font-weight:700;margin-bottom:3px;">Drop Excel / CSV file here</div>
+      <div style="font-size:11.5px;color:var(--muted);">or click to browse</div>
+    </div>
+    <div class="md-foot">
+      <button class="btn btn-s" onclick="closeM('importModal')">Cancel</button>
+      <button class="btn btn-p" onclick="closeM('importModal');toast('Import: 3 new, 1 updated, 2 skipped','success')">Process Import ✓</button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="ldModal">
+  <div class="md">
+    <div class="md-t" id="ldTitle">📦 Loading — FIFO Production Dates</div>
+    <div style="padding:9px;background:rgba(45,125,210,.07);border-radius:7px;border:1px solid rgba(45,125,210,.18);font-size:11.5px;color:var(--blue);margin-bottom:14px;">
+      ℹ️ Enter production date per batch. Oldest date MUST be loaded first (FIFO). System warns on violation.
+    </div>
+    <div id="ldSections"></div>
+    <div id="ldFifoSt" style="margin-top:8px;"></div>
+    <div class="md-foot">
+      <button class="btn btn-s" onclick="closeM('ldModal')">Cancel</button>
+      <button class="btn btn-p" onclick="confirmLoad()">Confirm Loading & Reduce Stock ✓</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastEl"></div>
+
+<script>
+// ══ FIREBASE INIT ══
+const firebaseConfig = {
+  apiKey: "AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",
+  authDomain: "ofm-trucks-movemments-harees.firebaseapp.com",
+  databaseURL: "https://ofm-trucks-movemments-harees-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ofm-trucks-movemments-harees",
+  storageBucket: "ofm-trucks-movemments-harees.firebasestorage.app",
+  messagingSenderId: "887529330000",
+  appId: "1:887529330000:web:0aee5473176e88df8b0855",
+  measurementId: "G-NEYKGX4XWZ"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+async function fbSave(col, docId, data) {
+  try { await db.collection(col).doc(docId).set(data); } catch(e) { console.warn('FB save failed:', e); }
+}
+async function fbLoad(col, docId) {
+  try { const d = await db.collection(col).doc(docId).get(); return d.exists ? d.data() : null; }
+  catch(e) { console.warn('FB load failed:', e); return null; }
+}
+async function restoreFromFirebase(uid) {
+  const remote = await fbLoad('ofm_data', uid);
+  if (!remote) return;
+  const remoteTime = remote.updatedAt ? new Date(remote.updatedAt) : new Date(0);
+  const localTime = new Date(localStorage.getItem('ofm_lastSave') || 0);
+  if (remoteTime > localTime) {
+    if (remote.soData)     { soData = remote.soData; }
+    if (remote.inventory)  { inventory = remote.inventory; }
+    if (remote.queueTrucks){ queueTrucks = remote.queueTrucks; }
+    if (remote.lineState)  { lineState = remote.lineState; }
+    if (remote.auditLog)   { auditLog = remote.auditLog; }
+    localStorage.setItem('ofm_lastSave', remote.updatedAt);
+  }
+}
+
+// ══ USERS ══
+const USERS={
+  'samih ahmed':{password:'1996',displayName:'Samih Ahmed',role:'admin',avatar:'S'},
+  'mahmoud':    {password:'1997',displayName:'Mahmoud',    role:'admin',avatar:'M'},
+  'michal':     {password:'1985',displayName:'Michal',     role:'admin',avatar:'MI'},
+  'ali':        {password:'2222',displayName:'Ali',        role:'admin',avatar:'A'},
+  'security':   {password:'5678',displayName:'Security Guard',role:'security',avatar:'G'},
+  'customer':   {password:'0000',displayName:'Customer',  role:'customer',avatar:'C'},
+  'manager':    {password:'9999',displayName:'Manager',   role:'management',avatar:'MG'}
+};
+const ROLE_NAV={admin:['dashboard','queue','so','inventory','management'],management:['dashboard','management'],security:['security'],customer:['customer']};
+const NAV_CFG={
+  dashboard: {icon:'🏠',label:'Dashboard',    title:'Dashboard'},
+  queue:     {icon:'🚛',label:'Queue & Lines', title:'Queue & Loading Lines'},
+  so:        {icon:'📋',label:'SO Management',title:'Sales Order Management'},
+  inventory: {icon:'📦',label:'Inventory',     title:'Physical Stock Inventory'},
+  management:{icon:'📊',label:'Management',   title:'Management Dashboard'},
+  security:  {icon:'🛡️',label:'Security Gate', title:'Security Gate — View Only'},
+  customer:  {icon:'🔍',label:'Track Order',  title:'Track Your Order'}
+};
+
+// ══ STATE ══
+let CU=null,selTruck=null,curWA={},curEditSO=null,curLoadSO=null;
+let auditLog=[];
+function logA(a){if(!CU)return;auditLog.unshift({user:CU.displayName,action:a,time:new Date().toLocaleTimeString()});renderActFeed();saveAll();}
+
+// ══ INVENTORY ══
+let inventory={
+  '715 - Broiler Starter':     [{date:'2026-02-01',qty:300},{date:'2026-02-10',qty:500}],
+  '716 - Broiler Finisher':    [{date:'2026-02-05',qty:200},{date:'2026-02-15',qty:400}],
+  '941 - RGF 8mm':             [{date:'2026-02-01',qty:250},{date:'2026-02-02',qty:250}],
+  '940 - RGF 4mm':             [{date:'2026-02-08',qty:350}],
+  '706 - Premium Barley':      [{date:'2026-01-20',qty:600}],
+  '883 - Barley Flakes':       [{date:'2026-02-12',qty:200}],
+  '920 - Dairy 18%':           [{date:'2026-02-03',qty:150}],
+  '703 - Yellow Corn':         [{date:'2026-02-07',qty:180}],
+  '951 - Horse Feed':          [{date:'2026-01-28',qty:100}],
+  '976 - Camel Feed (35kg)':   [{date:'2026-02-14',qty:80}],
+  '884 - Wheat Flakes':        [{date:'2026-02-09',qty:220}],
+  '709 - Broiler Starter 10kg':[{date:'2026-02-11',qty:50}],
+  '721 - Watani Broiler Starter':[{date:'2026-02-06',qty:300}],
+  '722 - Watani Broiler Finisher':[{date:'2026-02-13',qty:280}],
+  '600 - Male Feed':           [{date:'2026-02-04',qty:400}],
+  '892 - Breeder Layer PH2':   [{date:'2026-02-16',qty:120}]
+};
+
+// ══ SO DATA ══
+let soData=[
+  {so:'SO-19998',customer:'Al Rawabi Farms',phone:'+96871189735',products:[{name:'715 - Broiler Starter',qty:600},{name:'716 - Broiler Finisher',qty:200}],releaseDate:'2026-04-20',status:'pending',source:'ERP',roll:1,confirmed:false},
+  {so:'SO-20001',customer:'Gulf Poultry Co.',phone:'+96892345678',products:[{name:'715 - Broiler Starter',qty:800}],releaseDate:'2026-04-22',status:'assigned',source:'Power BI',roll:2,confirmed:true},
+  {so:'SO-20002',customer:'Muscat Dairy LLC',phone:'+96895551234',products:[{name:'941 - RGF 8mm',qty:600},{name:'920 - Dairy 18%',qty:100}],releaseDate:'2026-04-23',status:'loading',source:'Manual',roll:3,confirmed:true},
+  {so:'SO-20003',customer:'Oman Livestock',phone:'+96899887766',products:[{name:'706 - Premium Barley',qty:650}],releaseDate:'2026-04-24',status:'done',source:'ERP',roll:4,confirmed:true}
+];
+
+// ══ QUEUE ══
+let queueTrucks=[
+  {plate:'A 12345',product:'715 - Broiler Starter',category:'Poultry',so:'SO-19998',phone:'+96871189735',roll:1},
+  {plate:'B 67890',product:'941 - RGF 8mm',category:'Ruminant',so:'SO-20001',phone:'+96892345678',roll:2},
+  {plate:'C 11111',product:'706 - Premium Barley',category:'Barley',so:'SO-20002',phone:'+96895551234',roll:3},
+  {plate:'D 22222',product:'716 - Broiler Finisher',category:'Poultry',so:'SO-20003',phone:'+96899887766',roll:4},
+  {plate:'E 33333',product:'920 - Dairy 18%',category:'Mix',so:'SO-20004',phone:'+96877665544',roll:5}
+];
+
+// ══ LINES ══
+const MAIN_LINES=['D1','D2','R1','R2','P4','Red','D5','FL1','FL2','FL3','FL4'];
+const CM_LINES=['C1','C2'];
+let lineState={
+  D1:{occupied:true,plate:'A 12345',product:'715 - Broiler Starter',so:'SO-19998',startTime:Date.now()-83000},
+  R1:{occupied:true,plate:'B 67890',product:'941 - RGF 8mm',so:'SO-20001',startTime:Date.now()-45000},
+  D5:{occupied:true,plate:'C 11111',product:'706 - Premium Barley',so:'SO-20002',startTime:Date.now()-130000}
+};
+let timerIvs={};
+
+// ══ SAVE ALL (localStorage + Firebase) ══
+function saveAll(){
+  localStorage.setItem('ofm_so', JSON.stringify(soData));
+  localStorage.setItem('ofm_inv', JSON.stringify(inventory));
+  localStorage.setItem('ofm_queue', JSON.stringify(queueTrucks));
+  localStorage.setItem('ofm_lines', JSON.stringify(lineState));
+  localStorage.setItem('ofm_audit', JSON.stringify(auditLog));
+  const now = new Date().toISOString();
+  localStorage.setItem('ofm_lastSave', now);
+  if(CU){
+    fbSave('ofm_data', CU.username, {
+      soData, inventory, queueTrucks, lineState,
+      auditLog: auditLog.slice(0,200),
+      updatedAt: now
+    });
+  }
+}
+
+// ══ LOGIN ══
+function doLogin(){
+  const u=document.getElementById('lu').value.trim().toLowerCase();
+  const p=document.getElementById('lp').value.trim();
+  const err=document.getElementById('lerr');
+  if(USERS[u]&&USERS[u].password===p){
+    CU={...USERS[u],username:u};
+    err.style.display='none';
+    document.getElementById('loginPage').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('uName').textContent=CU.displayName;
+    document.getElementById('uRole').textContent=CU.role.charAt(0).toUpperCase()+CU.role.slice(1);
+    document.getElementById('uAv').textContent=CU.avatar;
+    buildNav(ROLE_NAV[CU.role]);
+    const first=ROLE_NAV[CU.role][0];
+    showSec(first);
+    document.getElementById('pgDate').textContent=new Date().toLocaleDateString('en-OM',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    logA('Logged in');
+    // Restore from Firebase then render
+    restoreFromFirebase(CU.username).then(()=>{ renderAll(); startTimers(); });
+  } else {
+    err.style.display='block';
+  }
+}
+function logout(){logA('Logged out');CU=null;document.getElementById('loginPage').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('lu').value='';document.getElementById('lp').value='';}
+
+// ══ NAV ══
+function buildNav(items){
+  const c=document.getElementById('sbNav');
+  c.innerHTML='<div class="sb-section">Navigation</div>';
+  items.forEach(k=>{
+    const cfg=NAV_CFG[k];
+    const d=document.createElement('div');
+    d.className='nav-i';d.id='nav-'+k;
+    d.innerHTML=`<span class="nav-ico">${cfg.icon}</span>${cfg.label}`;
+    if(k==='queue'){const b=document.createElement('span');b.className='nav-badge';b.id='navQBadge';b.textContent=queueTrucks.length;d.appendChild(b);}
+    d.onclick=()=>showSec(k);
+    c.appendChild(d);
+  });
+}
+function showSec(k){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('active'));
+  const s=document.getElementById('sec-'+k);if(s)s.classList.add('active');
+  const n=document.getElementById('nav-'+k);if(n)n.classList.add('active');
+  document.getElementById('pgTitle').textContent=NAV_CFG[k]?.title||k;
+}
+
+function renderAll(){renderQueue();renderLines();renderSOTable();renderInventory();renderMgmtRolls();renderMiniLines();renderDashActivity();renderActFeed();}
+
+// ══ DASHBOARD ══
+function renderDashActivity(){
+  const c=document.getElementById('dashActivity');if(!c)return;
+  const items=[['Poultry','45%','#2D7DD2'],['Ruminant','30%','var(--green)'],['Barley','15%','#d4a800'],['Mix','10%','var(--cr)']];
+  c.innerHTML=items.map(([l,v,col])=>`<div><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px;"><span>${l}</span><span style="font-weight:700;">${v}</span></div><div class="pb"><div class="pf" style="width:${v};background:${col}"></div></div></div>`).join('');
+}
+function renderActFeed(){
+  const c=document.getElementById('actFeed');if(!c)return;
+  const feed=auditLog.slice(0,5);
+  if(!feed.length){c.innerHTML='<div style="font-size:12px;color:var(--muted);padding:4px 0;">No activity yet.</div>';return;}
+  c.innerHTML=feed.map(a=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#FAFBFE;border-radius:8px;border:1px solid var(--border);font-size:11.5px;"><span style="color:var(--cr);font-weight:700;">${a.user}</span><span style="color:var(--muted);">${a.action}</span><span style="margin-left:auto;color:var(--muted);font-size:10.5px;">${a.time}</span></div>`).join('');
+}
+function renderMiniLines(){
+  const c=document.getElementById('miniLines');if(!c)return;
+  c.innerHTML='';
+  [...MAIN_LINES,...CM_LINES].slice(0,8).forEach(l=>{
+    const busy=lineState[l]?.occupied;
+    const d=document.createElement('div');
+    d.style.cssText=`text-align:center;padding:9px;border-radius:7px;background:${busy?'rgba(29,176,106,.09)':'#F7F8FC'};border:1px solid ${busy?'rgba(29,176,106,.2)':'var(--border)'}`;
+    d.innerHTML=`<div style="font-weight:800;font-size:12px;">${l}</div><div style="font-size:9px;color:${busy?'var(--green)':'var(--muted)'};font-weight:700;">${busy?'BUSY':'FREE'}</div>`;
+    c.appendChild(d);
+  });
+  const dl=document.getElementById('d-lines');if(dl)dl.textContent=Object.values(lineState).filter(v=>v.occupied).length;
+  const dq=document.getElementById('d-queue');if(dq)dq.textContent=queueTrucks.length;
+  const ds=document.getElementById('d-sos');if(ds)ds.textContent=soData.filter(s=>s.status==='pending').length;
+}
+
+// ══ QUEUE RENDER ══
+function renderQueue(){
+  const c=document.getElementById('truckQ');if(!c)return;
+  c.innerHTML='';
+  queueTrucks.forEach((t,i)=>{
+    const cc={Poultry:'c-poultry',Ruminant:'c-ruminant',Barley:'c-barley',Mix:'c-mix'}[t.category]||'c-mix';
+    const d=document.createElement('div');
+    d.className='tc';d.id='tc-'+i;
+    d.innerHTML=`<span class="roll-n">#${t.roll}</span><div class="plate">${t.plate}</div><div style="font-size:11px;color:var(--text);font-weight:600;">${t.product}</div><div style="font-size:10.5px;color:var(--muted);">${t.so}</div><div style="display:flex;gap:5px;margin-top:7px;align-items:center;"><span class="cat-b ${cc}">${t.category.toUpperCase()}</span><button class="btn btn-wa btn-xs" onclick="event.stopPropagation();sendWA('${t.phone}','${t.so}','#${t.roll}','${t.plate}')" style="margin-left:auto;">💬</button></div>`;
+    d.onclick=()=>selectTruck(i);
+    c.appendChild(d);
+  });
+  const b=document.getElementById('qBadge');if(b)b.textContent=queueTrucks.length;
+  const nb=document.getElementById('navQBadge');if(nb)nb.textContent=queueTrucks.length;
+}
+function selectTruck(i){
+  document.querySelectorAll('.tc').forEach(c=>c.classList.remove('sel'));
+  const el=document.getElementById('tc-'+i);if(el)el.classList.add('sel');
+  selTruck={...queueTrucks[i],idx:i};
+  document.getElementById('selT').value=selTruck.plate+' — '+selTruck.product;
+  document.getElementById('selC').value=selTruck.category;
+}
+
+// ══ LINES RENDER ══
+function renderLines(){
+  renderLG('mainLines',MAIN_LINES,false);
+  renderLG('cmLines',CM_LINES,true);
+  renderMiniLines();
+}
+function renderLG(cid,lines,isCmill){
+  const c=document.getElementById(cid);if(!c)return;
+  c.innerHTML='';
+  lines.forEach(line=>{
+    const st=lineState[line];
+    const d=document.createElement('div');
+    d.className='ls'+(st?.occupied?' occ':'')+(isCmill?' restr':'');
+    d.id='sl-'+line;d.onclick=()=>clickLine(line);
+    if(st?.occupied){
+      d.innerHTML=`<div class="ln">${line}</div><div class="lplate">${st.plate}</div><div class="lprod">${st.product}</div><div class="ltimer" id="tim-${line}">⏱ 00:00</div><div class="lstat">Loading</div>`;
+    } else {
+      d.innerHTML=`${isCmill?'<div class="rbadge">POULTRY ONLY</div>':''}<div class="ln">${line}</div><div class="lstat">Available</div>`;
+    }
+    c.appendChild(d);
+  });
+}
+
+// ══ ASSIGN LINE ══
+function assignLine(){
+  if(!selTruck){toast('Select a truck first!','error');return;}
+  const line=document.getElementById('lineSel').value;
+  if(!line){toast('Select a line!','error');return;}
+  if((line==='C1'||line==='C2')&&selTruck.category!=='Poultry'){toast('❌ C-Mill is POULTRY ONLY!','error');return;}
+  if(lineState[line]?.occupied){toast('❌ Line '+line+' is occupied!','error');return;}
+  lineState[line]={occupied:true,plate:selTruck.plate,product:selTruck.product,so:selTruck.so,startTime:Date.now()};
+  const soE=soData.find(s=>s.so===selTruck.so);if(soE)soE.status='assigned';
+  queueTrucks.splice(selTruck.idx,1);
+  queueTrucks.forEach((t,i)=>t.roll=i+1);
+  logA(`Assigned ${selTruck.plate} → Line ${line} (${selTruck.so})`);
+  toast(`✅ ${selTruck.plate} → Line ${line}`,'success');
+  clearSel();renderQueue();renderLines();renderSOTable();renderMgmtRolls();
+}
+function clickLine(line){
+  const st=lineState[line];if(!st?.occupied)return;
+  openLD(line,st);
+}
+function clearSel(){
+  selTruck=null;
+  document.getElementById('selT').value='';document.getElementById('selC').value='';document.getElementById('lineSel').value='';
+  document.querySelectorAll('.tc').forEach(c=>c.classList.remove('sel'));
+}
+
+// ══ LOADING DATES (FIFO) ══
+function openLD(line,st){
+  curLoadSO={line,st};
+  document.getElementById('ldTitle').textContent=`📦 Loading — Line ${line} · ${st.plate}`;
+  const con=document.getElementById('ldSections');con.innerHTML='';
+  const soE=soData.find(s=>s.so===(st.so||''));
+  const prods=soE?soE.products:[{name:st.product,qty:0}];
+  prods.forEach((p,pi)=>{
+    const batches=inventory[p.name]||[];
+    const sec=document.createElement('div');sec.style.marginBottom='14px';
+    sec.innerHTML=`<div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:7px;">${p.name} — ${p.qty} bags total</div>`;
+    const bc=document.createElement('div');bc.id=`ldb-${pi}`;
+    batches.forEach((b,bi)=>{
+      const row=document.createElement('div');row.className='fipo-r';
+      row.innerHTML=`<span style="font-size:10.5px;color:var(--muted);min-width:120px;">Batch ${bi+1} · Prod: <strong>${b.date}</strong></span><input type="number" id="ldq-${pi}-${bi}" placeholder="Bags to load" min="0" max="${b.qty}" style="width:100px;" oninput="chkFifo(${pi})"><span style="font-size:10.5px;color:var(--muted);">/ ${b.qty} avail</span>`;
+      bc.appendChild(row);
+    });
+    if(!batches.length)bc.innerHTML='<div style="font-size:11.5px;color:var(--cr);">⚠️ No stock for this product</div>';
+    sec.appendChild(bc);
+    const fs=document.createElement('div');fs.id=`ldfs-${pi}`;sec.appendChild(fs);
+    con.appendChild(sec);
+  });
+  document.getElementById('ldFifoSt').innerHTML='';
+  document.getElementById('ldModal').classList.add('open');
+}
+function chkFifo(pi){
+  const inputs=document.querySelectorAll(`[id^="ldq-${pi}-"]`);
+  const vals=Array.from(inputs).map(i=>parseFloat(i.value)||0);
+  const el=document.getElementById(`ldfs-${pi}`);
+  let viol=false;
+  for(let i=0;i<vals.length-1;i++){if(vals[i]===0&&vals[i+1]>0){viol=true;break;}}
+  if(viol)el.innerHTML='<div class="fipo-warn">⚠️ FIFO VIOLATION: Load older dates first!</div>';
+  else if(vals.some(v=>v>0))el.innerHTML='<div class="fipo-ok">✅ FIFO order correct</div>';
+  else el.innerHTML='';
+}
+function confirmLoad(){
+  if(!curLoadSO)return;
+  const {line,st}=curLoadSO;
+  const soE=soData.find(s=>s.so===(st.so||''));
+  const prods=soE?soE.products:[{name:st.product,qty:0}];
+  let fifoViolation=false;let noInvProducts=[];let reds=[];
+  prods.forEach((p,pi)=>{
+    const batches=inventory[p.name]||[];
+    if(batches.length===0){noInvProducts.push(p.name);reds.push({product:p.name,batches,vals:[]});return;}
+    const vals=Array.from(document.querySelectorAll(`[id^="ldq-${pi}-"]`)).map(i=>parseFloat(i.value)||0);
+    for(let i=0;i<vals.length-1;i++){
+      if(vals[i]===0&&batches[i]&&batches[i].qty>0&&vals[i+1]>0){fifoViolation=true;}
+    }
+    vals.forEach((v,bi)=>{
+      if(v>0&&batches[bi]&&v>batches[bi].qty){
+        toast(`❌ Batch ${batches[bi].date}: only ${batches[bi].qty} bags available!`,'error');
+        fifoViolation=true;
+      }
+    });
+    reds.push({product:p.name,batches,vals});
+  });
+  if(noInvProducts.length>0){toast('❌ No inventory for: '+noInvProducts.join(', '),'error');return;}
+  if(fifoViolation){toast('❌ FIFO violation — load older batches first!','error');return;}
+  const hasQty=reds.some(r=>r.vals.some(v=>v>0));
+  if(!hasQty){toast('❌ Enter at least one quantity to confirm loading!','error');return;}
+  reds.forEach(r=>{
+    r.vals.forEach((v,bi)=>{
+      if(v>0&&inventory[r.product]&&inventory[r.product][bi]){
+        inventory[r.product][bi].qty-=v;
+        if(inventory[r.product][bi].qty<0)inventory[r.product][bi].qty=0;
+      }
+    });
+    if(inventory[r.product])inventory[r.product]=inventory[r.product].filter(b=>b.qty>0);
+  });
+  delete lineState[line];
+  if(soE)soE.status='done';
+  logA(`Confirmed loading Line ${line} — stock reduced (FIFO)`);
+  toast('✅ Loading confirmed! Stock reduced.','success');
+  closeM('ldModal');renderLines();renderInventory();renderSOTable();renderMgmtRolls();
+}
+
+// ══ SO TAB TOGGLE ══
+function showSOTab(t){
+  document.getElementById('soView-list').style.display=t==='list'?'':'none';
+  document.getElementById('soView-forecast').style.display=t==='forecast'?'':'none';
+  const tl=document.getElementById('soTab-list'),tf=document.getElementById('soTab-forecast');
+  if(t==='list'){tl.style.background='var(--cr)';tl.style.color='#fff';tf.style.background='';tf.style.color='var(--muted)';}
+  else{tf.style.background='var(--cr)';tf.style.color='#fff';tl.style.background='';tl.style.color='var(--muted)';}
+  if(t==='forecast')renderForecast();
+}
+
+// ══ FORECAST ══
+function renderForecast(){
+  const grid=document.getElementById('forecastGrid');if(!grid)return;
+  grid.innerHTML='';
+  const today=new Date();
+  for(let i=0;i<30;i++){
+    const d=new Date(today);d.setDate(today.getDate()+i);
+    const ds=d.toISOString().split('T')[0];
+    const count=soData.filter(s=>s.releaseDate===ds).length;
+    const confirmed=soData.filter(s=>s.releaseDate===ds&&s.confirmed).length;
+    const cell=document.createElement('div');
+    cell.style.cssText=`text-align:center;padding:9px 6px;border-radius:8px;background:${count>0?'rgba(192,57,43,.07)':'#FAFBFE'};border:1px solid ${count>0?'rgba(192,57,43,.2)':'var(--border)'};cursor:${count>0?'pointer':'default'};transition:all .15s;`;
+    cell.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:3px;">${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</div><div style="font-size:18px;font-weight:900;color:${count>0?'var(--cr)':'var(--muted)'};">${count}</div><div style="font-size:9px;color:var(--muted);">SOs</div>${count>0?`<div style="font-size:9px;color:var(--green);margin-top:2px;">${confirmed}✓</div>`:''}`;
+    if(count>0)cell.onclick=()=>showForecastDetail(ds);
+    grid.appendChild(cell);
+  }
+}
+function showForecastDetail(ds){
+  const detail=document.getElementById('forecastDetail');
+  const title=document.getElementById('forecastDetailTitle');
+  const tbody=document.getElementById('forecastDetailBody');
+  detail.style.display='';
+  title.textContent='SOs for '+ds;
+  const daySOs=soData.filter(s=>s.releaseDate===ds);
+  tbody.innerHTML=daySOs.map(s=>`<tr><td><strong>${s.so}</strong></td><td>${s.customer}</td><td>${s.products.map(p=>`<small>${p.name}×${p.qty}</small>`).join('<br>')}</td><td><span class="sb-pill ${{pending:'sp-pending',assigned:'sp-assigned',loading:'sp-loading',done:'sp-done'}[s.status]}">${{pending:'⏳ Pending',assigned:'🚛 Assigned',loading:'📦 Loading',done:'✅ Done'}[s.status]}</span></td><td>${s.confirmed?'<span style="color:var(--green);font-size:10.5px;">✅ Yes</span>':'<span style="color:var(--orange);font-size:10.5px;">❌ No</span>'}</td></tr>`).join('');
+}
+
+// ══ SO TABLE ══
+function renderSOTable(){
+  const tb=document.getElementById('soTbody');if(!tb)return;
+  tb.innerHTML='';
+  const sorted=[...soData].sort((a,b)=>new Date(a.releaseDate)-new Date(b.releaseDate));
+  sorted.forEach(s=>{
+    const sm={pending:'sp-pending',assigned:'sp-assigned',loading:'sp-loading',done:'sp-done',rescheduled:'sp-pending'};
+    const sl={pending:'⏳ Pending',assigned:'🚛 Assigned',loading:'📦 Loading',done:'✅ Done',rescheduled:'🔄 Rescheduled'};
+    const src={ERP:'src-e','Power BI':'src-e',Manual:'src-m'};
+    const tr=document.createElement('tr');
+    const ph=s.products.map(p=>`<small>${p.name} × ${p.qty}</small>`).join('<br>');
+    const reschedNote=s.rescheduledTo?`<br><small style="color:var(--orange);">→ ${s.rescheduledTo}</small>`:'';
+    tr.innerHTML=`<td><strong>${s.so}</strong></td><td>${s.customer}<br><small style="color:var(--muted)">${s.phone}</small></td><td>${ph}</td><td><small>${s.releaseDate}${reschedNote}</small></td><td><span class="sb-pill ${sm[s.status]||'sp-pending'}">${sl[s.status]||s.status}</span></td><td><span class="src-b ${src[s.source]||'src-m'}">${s.source}</span></td>
+    <td style="white-space:nowrap;">${s.status==='done'?'<span style="font-size:10.5px;color:var(--muted)">Completed</span>':`
+      ${s.status==='pending'?`<button class="btn btn-p btn-xs" onclick="forceAssign('${s.so}')">⚡ Assign</button> `:''}
+      <button class="btn btn-s btn-xs" onclick="openEditSO('${s.so}')">✏️</button>
+      <button class="btn btn-s btn-xs" onclick="openReschedule('${s.so}')" title="Reschedule">🔄</button>
+      <button class="btn btn-wa btn-xs" onclick="sendWA('${s.phone}','${s.so}','#${s.roll}','${s.customer}')">💬</button>`}
+    </td>`;
+    tb.appendChild(tr);
+  });
+}
+
+// ══ RESCHEDULE ══
+function openReschedule(soNum){
+  const s=soData.find(x=>x.so===soNum);if(!s)return;
+  document.getElementById('reschedSOIdx').value=soNum;
+  document.getElementById('reschedSONum').value=soNum+' — '+s.customer;
+  const tom=new Date();tom.setDate(tom.getDate()+1);
+  document.getElementById('reschedDate').value=tom.toISOString().split('T')[0];
+  document.getElementById('reschedReason').value='';
+  document.getElementById('reschedModal').classList.add('open');
+}
+function confirmReschedule(){
+  const soNum=document.getElementById('reschedSOIdx').value;
+  const newDate=document.getElementById('reschedDate').value;
+  const reason=document.getElementById('reschedReason').value||'No reason given';
+  if(!newDate){toast('Select a new date!','error');return;}
+  const s=soData.find(x=>x.so===soNum);if(!s)return;
+  const oldDate=s.releaseDate;
+  s.releaseDate=newDate;
+  s.rescheduledTo=newDate;
+  s.status='rescheduled';
+  s.rescheduledFrom=oldDate;
+  s.rescheduledReason=reason;
+  s.lastEditedBy=CU?.displayName;
+  logA(`Rescheduled ${soNum} from ${oldDate} → ${newDate} (${reason})`);
+  toast(`🔄 ${soNum} rescheduled to ${newDate}`,'info');
+  closeM('reschedModal');renderSOTable();renderMgmtRolls();
+}
+function forceAssign(soNum){
+  const s=soData.find(x=>x.so===soNum);if(!s)return;
+  s.status='assigned';s.confirmed=true;s.lastEditedBy=CU?.displayName||'System';
+  logA(`Force assigned ${soNum}`);toast(`✅ ${soNum} force assigned`,'success');
+  renderSOTable();renderMgmtRolls();
+}
+function openEditSO(soNum){
+  const s=soData.find(x=>x.so===soNum);if(!s)return;
+  curEditSO=soNum;
+  document.getElementById('eSoNum').value=s.so;document.getElementById('eSoDate').value=s.releaseDate;
+  document.getElementById('eSoCust').value=s.customer;document.getElementById('eSoPhone').value=s.phone;
+  const c=document.getElementById('eProdLines');c.innerHTML='';
+  s.products.forEach(p=>addEPL(p.name,p.qty));
+  document.getElementById('editSOModal').classList.add('open');
+}
+function addEPL(name='',qty=''){
+  const c=document.getElementById('eProdLines');
+  const d=document.createElement('div');d.className='pl';
+  d.innerHTML=`<select style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:11.5px;font-family:'Inter',sans-serif;background:#FAFBFE;">${Object.keys(inventory).map(k=>`<option ${k===name?'selected':''}>${k}</option>`).join('')}</select><input type="number" value="${qty}" placeholder="Qty" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:11.5px;font-family:'Inter',sans-serif;"><button class="btn-rl" onclick="this.parentElement.remove()">✕</button>`;
+  c.appendChild(d);
+}
+function saveEditSO(){
+  const s=soData.find(x=>x.so===curEditSO);if(!s)return;
+  s.releaseDate=document.getElementById('eSoDate').value;
+  s.customer=document.getElementById('eSoCust').value;
+  s.phone=document.getElementById('eSoPhone').value;
+  const lines=document.querySelectorAll('#eProdLines .pl');
+  s.products=Array.from(lines).map(l=>({name:l.querySelector('select').value,qty:parseInt(l.querySelector('input').value)||0}));
+  s.lastEditedBy=CU?.displayName||'System';
+  logA(`Edited SO ${curEditSO}`);toast(`✅ ${curEditSO} updated`,'success');
+  closeM('editSOModal');renderSOTable();
+}
+
+// ══ NEW SO ══
+function openNewSO(){document.getElementById('prodLines').innerHTML='';addPL();document.getElementById('newSOModal').classList.add('open');}
+function addPL(){
+  const c=document.getElementById('prodLines');
+  const d=document.createElement('div');d.className='pl';
+  d.innerHTML=`<select style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:11.5px;font-family:'Inter',sans-serif;background:#FAFBFE;"><option value="">Select Product...</option>${Object.keys(inventory).map(k=>`<option>${k}</option>`).join('')}</select><input type="number" placeholder="Qty (bags)" style="padding:7px;border:1px solid var(--border);border-radius:6px;font-size:11.5px;font-family:'Inter',sans-serif;"><button class="btn-rl" onclick="this.parentElement.remove()">✕</button>`;
+  c.appendChild(d);
+}
+function saveSO(){
+  const num=document.getElementById('soNum').value.trim();
+  const date=document.getElementById('soDate').value;
+  const cust=document.getElementById('soCust').value.trim();
+  const phone=document.getElementById('soPhone').value.trim();
+  if(!num||!date||!cust){toast('Fill all required fields!','error');return;}
+  if(soData.find(s=>s.so===num)){toast('SO number already exists!','error');return;}
+  const lines=document.querySelectorAll('#prodLines .pl');
+  const prods=Array.from(lines).map(l=>({name:l.querySelector('select').value,qty:parseInt(l.querySelector('input').value)||0})).filter(p=>p.name);
+  if(!prods.length){toast('Add at least one product!','error');return;}
+  soData.push({so:num,customer:cust,phone,products:prods,releaseDate:date,status:'pending',source:'Manual',roll:soData.length+1,confirmed:false,lastEditedBy:CU?.displayName});
+  logA(`Registered new SO ${num}`);toast(`✅ ${num} registered`,'success');
+  closeM('newSOModal');renderSOTable();renderMgmtRolls();
+}
+
+// ══ INVENTORY ══
+function renderInventory(){
+  const c=document.getElementById('invGrid');if(!c)return;c.innerHTML='';
+  Object.entries(inventory).forEach(([prod,batches])=>{
+    const total=batches.reduce((s,b)=>s+b.qty,0);
+    const card=document.createElement('div');card.className='inv-pc';
+    const sorted=[...batches].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const bh=sorted.map((b,i)=>`<div class="inv-dr"><div class="inv-dl">📅 ${b.date}</div><div class="inv-dq">${b.qty} bags</div><div class="inv-db ${i===0?'ff':''}">${i===0?'LOAD FIRST':'Next'}</div></div>`).join('');
+    const ky=prod.replace(/\s/g,'_');
+    card.innerHTML=`<div class="inv-pn">${prod}</div><div class="inv-tot">${total}</div><div class="inv-tl">Total bags in stock</div>${bh}<div class="inv-add"><input type="date" id="nd-d-${ky}" style="flex:1;min-width:100px;"><input type="number" id="nd-q-${ky}" placeholder="Qty" style="width:70px;"><button class="btn btn-g btn-sm" onclick="addInvBatch('${prod}')">+ Add</button></div>`;
+    c.appendChild(card);
+  });
+}
+function addInvBatch(prod){
+  const ky=prod.replace(/\s/g,'_');
+  const date=document.getElementById('nd-d-'+ky)?.value;
+  const qty=parseInt(document.getElementById('nd-q-'+ky)?.value)||0;
+  if(!date||qty<=0){toast('Enter valid date and quantity!','error');return;}
+  if(!inventory[prod])inventory[prod]=[];
+  const ex=inventory[prod].find(b=>b.date===date);
+  if(ex){ex.qty+=qty;}else{inventory[prod].push({date,qty});inventory[prod].sort((a,b)=>new Date(a.date)-new Date(b.date));}
+  logA(`Added stock: ${prod} · ${qty} bags · ${date}`);
+  toast(`✅ Added ${qty} bags of ${prod}`,'success');renderInventory();
+}
+
+// ══ MGMT ROLLS ══
+function renderMgmtRolls(){
+  const tb=document.getElementById('mgmtRolls');if(!tb)return;tb.innerHTML='';
+  soData.filter(s=>s.status!=='done').forEach(s=>{
+    const sm={pending:'sp-pending',assigned:'sp-assigned',loading:'sp-loading'};
+    const sl={pending:'⏳ Pending',assigned:'🚛 Assigned',loading:'📦 Loading'};
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><strong style="color:var(--cr)">#${s.roll}</strong></td><td>${s.so}</td><td>${s.customer}</td><td><span class="sb-pill ${sm[s.status]||''}">${sl[s.status]||s.status}</span></td><td>${s.confirmed?'<span style="color:var(--green);font-size:10.5px;">✅ Yes</span>':'<span style="color:var(--orange);font-size:10.5px;">❌ No</span>'}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+// ══ WHATSAPP ══
+function sendWA(phone,so,roll,name){
+  curWA={phone,so,roll,name,cleanPhone:phone.replace(/\D/g,'')};
+  const msg=`🚛 *OFM Fleet System*\n\nDear ${name},\n\nYour truck has been assigned *Roll Number ${roll}* for loading.\n\n📋 SO: *${so}*\n\n✅ Reply *CONFIRM* to confirm arrival.\nIf unable, reply *RESCHEDULE*.\n\n— Oman Flour Mills`;
+  document.getElementById('waMsg').innerHTML=msg.replace(/\n/g,'<br>').replace(/\*(.*?)\*/g,'<strong>$1</strong>');
+  document.getElementById('waModal').classList.add('open');
+}
+function openWA(){
+  const msg=encodeURIComponent(`OFM Fleet: Roll ${curWA.roll} for ${curWA.so} ready. Reply CONFIRM to confirm arrival.`);
+  window.open(`https://api.whatsapp.com/send?phone=${curWA.cleanPhone}&text=${msg}`,'_blank');
+  logA(`WhatsApp sent to ${curWA.phone} for ${curWA.so}`);closeM('waModal');
+}
+function manualConfirm(){
+  const s=soData.find(x=>x.so===curWA.so);
+  if(s){s.confirmed=true;s.status='assigned';s.lastEditedBy=CU?.displayName;}
+  logA(`Manually confirmed ${curWA.so}`);toast(`✅ ${curWA.so} confirmed`,'success');closeM('waModal');renderSOTable();renderMgmtRolls();
+}
+function reschedule(){logA(`Rescheduled ${curWA.so}`);toast('🔄 Rescheduled','info');closeM('waModal');}
+function openImport(){document.getElementById('importModal').classList.add('open');}
+
+// ══ CUSTOMER TRACK ══
+function trackSO(){
+  const v=document.getElementById('trkIn').value.trim();
+  if(!v){toast('Enter SO number','error');return;}
+  document.getElementById('trkResult').style.display='block';
+}
+
+// ══ MODALS ══
+function closeM(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+// ══ TIMERS ══
+function startTimers(){
+  Object.keys(lineState).forEach(l=>{if(lineState[l]?.occupied)startSlotTimer(l);});
+}
+function startSlotTimer(line){
+  if(timerIvs[line])clearInterval(timerIvs[line]);
+  const start=lineState[line]?.startTime||Date.now();
+  timerIvs[line]=setInterval(()=>{
+    const el=document.getElementById('tim-'+line);
+    if(!el){clearInterval(timerIvs[line]);return;}
+    const e=Math.floor((Date.now()-start)/1000);
+    const m=Math.floor(e/60),s=e%60;
+    el.textContent=`⏱ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  },1000);
+}
+
+// ══ TOAST ══
+function toast(msg,type='success'){
+  const t=document.getElementById('toastEl');
+  t.textContent=msg;t.className='toast '+type+' show';
+  setTimeout(()=>t.className='toast',3200);
+}
+
+// ══ PWA SERVICE WORKER ══
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(r=>console.log('OFM SW registered:',r.scope))
+      .catch(e=>console.warn('OFM SW failed:',e));
+  });
+}
+</script>
+</body>
+</html>
