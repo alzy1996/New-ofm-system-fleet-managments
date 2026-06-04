@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ERP Nexus — Settings</title>
+<meta name="theme-color" content="#E8612C">
+<meta name="description" content="ERP Nexus — Admin & Configuration">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<link rel="manifest" href="nexus-manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+/* ============================================================
+   ERP NEXUS — SHARED DESIGN SYSTEM (canonical, replicated per module)
+   ============================================================ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --primary:#E8612C;--primary-d:#C44D1E;--primary-l:rgba(232,97,44,.09);
+  --blue:#2D7DD2;--blue-l:rgba(45,125,210,.1);
+  --green:#1DB06A;--amber:#E8930A;--red:#E5484D;--purple:#7C3AED;
+  --bg:#F4F5F9;--surface:#FFFFFF;--surface-2:#FAFBFE;
+  --text:#0F1117;--muted:#7B8299;--border:#E7EAF2;
+  --sh-sm:0 1px 3px rgba(15,17,23,.06);
+  --sh:0 1px 3px rgba(15,17,23,.06),0 6px 18px rgba(15,17,23,.05);
+  --sh-lg:0 20px 40px rgba(15,17,23,.16);
+  --r:12px;--r-sm:8px;--r-lg:16px;
+  --glass:rgba(255,255,255,.72);
+}
+[data-theme="dark"]{
+  --bg:#0E1016;--surface:#171A22;--surface-2:#1E222C;
+  --text:#EEF1F7;--muted:#8A92A6;--border:#272C38;
+  --primary-l:rgba(232,97,44,.16);--blue-l:rgba(45,125,210,.18);
+  --glass:rgba(23,26,34,.72);
+  --sh-sm:0 1px 3px rgba(0,0,0,.4);--sh:0 1px 3px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3);
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;font-size:14px;}
+button{font-family:inherit;cursor:pointer;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+/* ---- App shell ---- */
+.shell{display:flex;height:100vh;height:100dvh;}
+.sb{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;height:100vh;height:100dvh;transition:width .2s;}
+.sb-head{padding:18px 16px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);}
+.sb-mark{width:38px;height:38px;background:linear-gradient(135deg,var(--primary),#F4863F);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:15px;flex-shrink:0;box-shadow:0 4px 12px rgba(232,97,44,.35);}
+.sb-brand{font-size:15px;font-weight:800;letter-spacing:-.3px;}
+.sb-brand span{color:var(--primary);}
+.sb-ver{font-size:10px;color:var(--muted);font-weight:600;}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0;}
+.sb-sec{padding:14px 16px 6px;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase;}
+.nav-i{display:flex;align-items:center;gap:11px;padding:10px 14px;margin:2px 9px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;transition:background .15s,color .15s;}
+.nav-i:hover{background:var(--surface-2);color:var(--text);}
+.nav-i.active{background:var(--primary-l);color:var(--primary);font-weight:700;}
+.nav-ico{font-size:17px;width:20px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:1px 7px;border-radius:9px;}
+.sb-foot{padding:12px;border-top:1px solid var(--border);}
+.u-card{display:flex;align-items:center;gap:10px;}
+.u-av{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue),#5AA0E6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex-shrink:0;}
+.u-name{font-size:12.5px;font-weight:700;}
+.u-role{font-size:10.5px;color:var(--muted);}
+.icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--muted);transition:all .15s;}
+.icon-btn:hover{color:var(--primary);border-color:var(--primary);}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.topbar{background:var(--glass);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;gap:16px;flex-shrink:0;z-index:30;}
+.tb-title h1{font-size:17px;font-weight:800;letter-spacing:-.3px;}
+.tb-title p{font-size:11.5px;color:var(--muted);}
+.search-wrap{flex:1;max-width:480px;position:relative;}
+.search-box{width:100%;height:40px;padding:0 14px 0 40px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;}
+.search-box:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);background:var(--surface);}
+.search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none;}
+.search-kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 6px;background:var(--surface);}
+.tb-actions{display:flex;align-items:center;gap:9px;margin-left:auto;}
+.live-pill{display:flex;align-items:center;gap:6px;background:rgba(29,176,106,.1);border:1px solid rgba(29,176,106,.25);color:var(--green);padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
+.live-pill.offline{background:rgba(232,147,10,.1);border-color:rgba(232,147,10,.3);color:var(--amber);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(1.6);}}
+
+.content{flex:1;overflow-y:auto;padding:20px 22px 90px;}
+.page-grid{max-width:1440px;margin:0 auto;}
+
+/* ---- KPI cards ---- */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:18px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh-sm);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--sh);}
+.kpi-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:11px;}
+.kpi-lbl{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:3px;}
+.kpi-val{font-size:25px;font-weight:800;letter-spacing:-.5px;line-height:1;}
+.kpi-sub{font-size:10.5px;font-weight:700;margin-top:5px;display:flex;align-items:center;gap:3px;}
+.kpi.alert{border-color:rgba(229,72,77,.35);}
+.kpi.alert .kpi-val{color:var(--red);animation:pulseRed 1.8s infinite;}
+@keyframes pulseRed{0%,100%{opacity:1;}50%{opacity:.55;}}
+.up{color:var(--green);}.dn{color:var(--red);}
+
+/* ---- Cards / layout ---- */
+.grid-2{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-bottom:14px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh-sm);}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.card-t{font-size:13.5px;font-weight:800;letter-spacing:-.2px;}
+.card-t small{font-weight:600;color:var(--muted);font-size:11px;margin-left:6px;}
+.link-btn{font-size:11.5px;font-weight:700;color:var(--primary);background:none;border:none;}
+
+/* ---- Action center ---- */
+.action-item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:11px;margin-bottom:9px;transition:border-color .15s;}
+.action-item:hover{border-color:var(--primary);}
+.ai-ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.ai-body{flex:1;min-width:0;}
+.ai-title{font-size:13px;font-weight:700;}
+.ai-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+.ai-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn{border:none;border-radius:var(--r-sm);font-weight:700;font-size:12px;padding:8px 14px;transition:filter .15s,background .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-pri{background:var(--primary);color:#fff;}.btn-pri:hover{background:var(--primary-d);}
+.btn-ok{background:var(--green);color:#fff;}.btn-ok:hover{filter:brightness(.93);}
+.btn-no{background:rgba(229,72,77,.12);color:var(--red);}.btn-no:hover{background:rgba(229,72,77,.2);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary);}
+.btn-sm{padding:6px 11px;font-size:11px;}
+
+/* ---- Activity feed ---- */
+.feed{display:flex;flex-direction:column;}
+.feed-i{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--border);}
+.feed-i:last-child{border-bottom:none;}
+.feed-dot{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.feed-txt{font-size:12.5px;line-height:1.5;}
+.feed-txt b{font-weight:700;}
+.feed-time{font-size:10.5px;color:var(--muted);margin-top:2px;}
+
+/* ---- badges & chips ---- */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:999px;}
+.b-green{background:rgba(29,176,106,.12);color:#0e7a4a;}
+.b-amber{background:rgba(232,147,10,.13);color:#a06003;}
+.b-red{background:rgba(229,72,77,.12);color:#c0292e;}
+.b-blue{background:var(--blue-l);color:#1a5fa0;}
+.b-grey{background:var(--surface-2);color:var(--muted);border:1px solid var(--border);}
+.chart-box{position:relative;height:230px;}
+.skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:shimmer 1.3s infinite;border-radius:8px;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+/* ---- Mobile bottom nav ---- */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--glass);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:50;justify-content:space-around;}
+.bn-i{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:9.5px;font-weight:700;}
+.bn-i.active{color:var(--primary);}
+.bn-i .nav-ico{font-size:19px;}
+
+/* ---- Search overlay results ---- */
+.search-results{position:absolute;top:46px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--sh-lg);padding:8px;max-height:60vh;overflow-y:auto;display:none;z-index:40;}
+.search-results.open{display:block;}
+.sr-group{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:8px 10px 4px;}
+.sr-i{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;}
+.sr-i:hover{background:var(--surface-2);}
+.sr-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.sr-name{font-size:12.5px;font-weight:600;}.sr-meta{font-size:10.5px;color:var(--muted);}
+.sr-ai{font-size:11.5px;color:var(--primary);font-weight:700;padding:8px 10px;}
+
+.toast-wrap{position:fixed;top:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;padding:12px 14px;box-shadow:var(--sh-lg);font-size:12.5px;font-weight:600;min-width:240px;animation:slideIn .3s ease;}
+@keyframes slideIn{from{transform:translateX(120%);}to{transform:translateX(0);}}
+
+/* ---- .seg segmented control (from purchaserequests.html) ---- */
+.seg{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:3px;}
+.seg button{border:none;background:none;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:700;color:var(--muted);}
+.seg button.on{background:var(--primary);color:#fff;}
+
+/* ---- .overlay / .modal (from purchaserequests.html) ---- */
+.overlay{position:fixed;inset:0;background:rgba(8,10,16,.45);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:120;padding:18px;}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:pop .2s cubic-bezier(.16,1,.3,1);}
+@keyframes pop{from{transform:scale(.95);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal-h{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-t{font-size:15px;font-weight:800;}
+.modal-b{padding:18px;}
+.modal-f{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+
+/* ---- .fld form-field styles (from purchaserequests.html) ---- */
+.fld{margin-bottom:14px;}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.fld input,.fld select,.fld textarea{width:100%;min-height:40px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font-family:inherit;font-size:13px;outline:none;}
+.fld textarea{min-height:84px;resize:vertical;}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);}
+
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr);}.grid-2,.grid-3{grid-template-columns:1fr;}}
+@media(max-width:760px){
+  .sb{display:none;}
+  .bottom-nav{display:flex;}
+  .topbar{padding:10px 14px;}
+  .tb-title{display:none;}
+  .search-kbd{display:none;}
+  .content{padding:14px 14px 90px;}
+  .kpis{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .live-pill span{display:none;}
+}
+
+/* ============================================================
+   MODULE H — Settings — Additional CSS
+   ============================================================ */
+
+/* ---- Settings layout ---- */
+.settings-layout{display:flex;gap:20px;align-items:flex-start;}
+.settings-tabs{flex:0 0 200px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px;box-shadow:var(--sh-sm);position:sticky;top:0;}
+.stab{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);border:none;background:none;width:100%;text-align:left;transition:background .15s,color .15s;}
+.stab:hover{background:var(--surface-2);color:var(--text);}
+.stab.active{background:var(--primary-l);color:var(--primary);font-weight:700;}
+.stab-ico{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.settings-body{flex:1;min-width:0;}
+.settings-sec{display:none;}
+.settings-sec.visible{display:block;}
+
+/* ---- Role banner (current role switcher) ---- */
+.role-banner{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 16px;margin-bottom:18px;box-shadow:var(--sh-sm);flex-wrap:wrap;}
+.role-banner-label{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;}
+.role-select-wrap{display:flex;align-items:center;gap:8px;}
+.role-select-wrap select{border:1.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;padding:6px 10px;outline:none;cursor:pointer;}
+.role-select-wrap select:focus{border-color:var(--primary);}
+.role-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;font-size:11px;font-weight:800;}
+.role-chip.admin{background:rgba(232,97,44,.12);color:var(--primary);}
+.role-chip.viewer{background:var(--surface-2);color:var(--muted);border:1px solid var(--border);}
+.role-chip.procurement{background:var(--blue-l);color:#1a5fa0;}
+.role-chip.finance{background:rgba(29,176,106,.12);color:#0e7a4a;}
+.role-chip.engineer{background:rgba(124,58,237,.12);color:var(--purple);}
+
+/* ---- Admin-only notice ---- */
+.admin-required{display:flex;align-items:center;gap:12px;background:rgba(232,147,10,.08);border:1px solid rgba(232,147,10,.28);border-radius:var(--r);padding:14px 16px;font-size:13px;font-weight:600;color:#a06003;}
+.admin-required-ico{font-size:22px;}
+
+/* ---- Project selector ---- */
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.project-card{border:2px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:border-color .15s,box-shadow .15s;background:var(--surface);}
+.project-card:hover{border-color:var(--primary);box-shadow:var(--sh);}
+.project-card.selected{border-color:var(--primary);background:var(--primary-l);}
+.project-card-name{font-size:13px;font-weight:800;margin-bottom:4px;}
+.project-card-meta{font-size:11px;color:var(--muted);}
+.project-card-badge{display:inline-flex;align-items:center;gap:4px;margin-top:8px;font-size:10px;font-weight:800;padding:2px 9px;border-radius:999px;}
+
+/* ---- Approval matrix table ---- */
+.matrix-table{width:100%;border-collapse:collapse;}
+.matrix-table th{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;padding:8px 12px;border-bottom:2px solid var(--border);text-align:left;}
+.matrix-table td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
+.matrix-table tr:last-child td{border-bottom:none;}
+.matrix-table tr:hover td{background:var(--surface-2);}
+.matrix-table input[type="number"]{width:120px;min-height:34px;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--text);font-family:inherit;font-size:13px;outline:none;}
+.matrix-table input[type="number"]:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);}
+.matrix-table input[type="number"]:disabled{opacity:.55;cursor:not-allowed;}
+.level-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;}
+.l1{background:rgba(29,176,106,.12);color:#0e7a4a;}
+.l2{background:var(--blue-l);color:#1a5fa0;}
+.l3{background:rgba(232,147,10,.13);color:#a06003;}
+.l4{background:rgba(124,58,237,.12);color:var(--purple);}
+.l5{background:rgba(229,72,77,.12);color:#c0292e;}
+
+/* ---- User management table ---- */
+.user-table{width:100%;border-collapse:collapse;}
+.user-table th{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;padding:8px 12px;border-bottom:2px solid var(--border);text-align:left;}
+.user-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
+.user-table tr:last-child td{border-bottom:none;}
+.user-table tr:hover td{background:var(--surface-2);}
+.user-table select{border:1.5px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;padding:5px 9px;outline:none;cursor:pointer;}
+.user-table select:focus{border-color:var(--primary);}
+.user-av{width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:11px;flex-shrink:0;vertical-align:middle;margin-right:8px;}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;}
+.status-active{background:var(--green);}
+.status-inactive{background:var(--muted);}
+.status-pending{background:var(--amber);}
+
+/* ---- Theme section ---- */
+.theme-options{display:flex;gap:12px;flex-wrap:wrap;}
+.theme-opt{flex:1;min-width:140px;border:2px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:border-color .15s,box-shadow .15s;background:var(--surface);text-align:center;}
+.theme-opt:hover{border-color:var(--primary);}
+.theme-opt.selected{border-color:var(--primary);background:var(--primary-l);}
+.theme-opt-ico{font-size:28px;margin-bottom:8px;}
+.theme-opt-name{font-size:13px;font-weight:800;}
+.theme-opt-desc{font-size:11px;color:var(--muted);margin-top:3px;}
+
+/* ---- Backup section ---- */
+.backup-actions{display:flex;flex-direction:column;gap:10px;}
+.backup-item{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);transition:border-color .15s;}
+.backup-item:hover{border-color:var(--primary);}
+.backup-ico{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.backup-body{flex:1;min-width:0;}
+.backup-title{font-size:13px;font-weight:700;}
+.backup-desc{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ---- Section header ---- */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+.sec-title{font-size:15px;font-weight:800;letter-spacing:-.2px;}
+.sec-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+
+@media(max-width:860px){
+  .settings-layout{flex-direction:column;}
+  .settings-tabs{flex:none;width:100%;position:static;display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;padding:6px;}
+  .stab{width:auto;flex:1;justify-content:center;font-size:11px;padding:8px 10px;}
+  .stab-ico{display:none;}
+  .project-grid{grid-template-columns:1fr 1fr;}
+  .theme-options{flex-direction:column;}
+}
+@media(max-width:480px){
+  .project-grid{grid-template-columns:1fr;}
+  .matrix-table,.user-table{font-size:11.5px;}
+  .user-av{display:none;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- ================= SIDEBAR (shared shell) ================= -->
+  <aside class="sb" id="sidebar"></aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="tb-title">
+        <h1>Settings</h1>
+        <p>Admin &amp; configuration</p>
+      </div>
+      <div class="search-wrap">
+        <span class="search-ico" aria-hidden="true">🔍</span>
+        <input class="search-box" id="globalSearch" placeholder="Search materials, suppliers, offers, requests…" aria-label="Global search" autocomplete="off">
+        <span class="search-kbd">Ctrl K</span>
+        <div class="search-results" id="searchResults" role="listbox"></div>
+      </div>
+      <div class="tb-actions">
+        <div class="live-pill" id="livePill"><span class="live-dot"></span><span>Live</span></div>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">🌙</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-grid">
+
+        <!-- Role Banner -->
+        <div class="role-banner" role="region" aria-label="Current demo role">
+          <span class="role-banner-label">Demo: Current Role</span>
+          <div class="role-select-wrap">
+            <select id="roleSelector" aria-label="Switch demo role" onchange="switchRole(this.value)">
+              <option value="Admin">Admin</option>
+              <option value="Procurement">Procurement</option>
+              <option value="Finance">Finance</option>
+              <option value="Engineer">Engineer</option>
+              <option value="Viewer">Viewer</option>
+            </select>
+          </div>
+          <span id="roleBadge" class="role-chip admin">⚙️ Admin</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto">Role controls visibility of restricted sections</span>
+        </div>
+
+        <!-- Settings layout: vertical tab nav + body -->
+        <div class="settings-layout">
+          <!-- Left tab nav -->
+          <nav class="settings-tabs" aria-label="Settings sections">
+            <button class="stab active" id="tab-project" onclick="switchTab('project')" aria-controls="sec-project" aria-selected="true">
+              <span class="stab-ico">🏗️</span>Project
+            </button>
+            <button class="stab" id="tab-approval" onclick="switchTab('approval')" aria-controls="sec-approval" aria-selected="false">
+              <span class="stab-ico">✅</span>Approval Matrix
+            </button>
+            <button class="stab" id="tab-users" onclick="switchTab('users')" aria-controls="sec-users" aria-selected="false">
+              <span class="stab-ico">👥</span>Users
+            </button>
+            <button class="stab" id="tab-theme" onclick="switchTab('theme')" aria-controls="sec-theme" aria-selected="false">
+              <span class="stab-ico">🎨</span>Theme
+            </button>
+            <button class="stab" id="tab-backup" onclick="switchTab('backup')" aria-controls="sec-backup" aria-selected="false">
+              <span class="stab-ico">💾</span>Backup
+            </button>
+          </nav>
+
+          <!-- Settings body -->
+          <div class="settings-body">
+
+            <!-- ===== SECTION: Project Selector ===== -->
+            <section class="settings-sec visible" id="sec-project" role="tabpanel" aria-labelledby="tab-project">
+              <div class="card">
+                <div class="sec-header">
+                  <div>
+                    <div class="sec-title">Project Selector</div>
+                    <div class="sec-sub">Switch the active project context for all procurement data</div>
+                  </div>
+                  <span id="activeProjectBadge" class="badge b-green">Active</span>
+                </div>
+                <div class="project-grid" id="projectGrid"></div>
+              </div>
+            </section>
+
+            <!-- ===== SECTION: Approval Matrix ===== -->
+            <section class="settings-sec" id="sec-approval" role="tabpanel" aria-labelledby="tab-approval">
+              <div class="card" id="approvalCard">
+                <!-- Filled by JS based on role -->
+              </div>
+            </section>
+
+            <!-- ===== SECTION: User Management ===== -->
+            <section class="settings-sec" id="sec-users" role="tabpanel" aria-labelledby="tab-users">
+              <div class="card" id="usersCard">
+                <!-- Filled by JS based on role -->
+              </div>
+            </section>
+
+            <!-- ===== SECTION: Theme ===== -->
+            <section class="settings-sec" id="sec-theme" role="tabpanel" aria-labelledby="tab-theme">
+              <div class="card">
+                <div class="sec-header">
+                  <div>
+                    <div class="sec-title">Appearance</div>
+                    <div class="sec-sub">Choose how ERP Nexus looks on your device</div>
+                  </div>
+                </div>
+                <div class="theme-options" role="radiogroup" aria-label="Theme selection" id="themeOptions"></div>
+              </div>
+            </section>
+
+            <!-- ===== SECTION: Backup ===== -->
+            <section class="settings-sec" id="sec-backup" role="tabpanel" aria-labelledby="tab-backup">
+              <div class="card">
+                <div class="sec-header">
+                  <div>
+                    <div class="sec-title">Backup &amp; Export</div>
+                    <div class="sec-sub">Download a copy of your procurement data for offline archiving</div>
+                  </div>
+                </div>
+                <div class="backup-actions" id="backupActions"></div>
+              </div>
+            </section>
+
+          </div><!-- /settings-body -->
+        </div><!-- /settings-layout -->
+
+      </div><!-- /page-grid -->
+    </div><!-- /content -->
+  </main>
+</div>
+
+<nav class="bottom-nav" id="bottomNav" aria-label="Primary"></nav>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Invite User Modal -->
+<div class="overlay" id="inviteModal" role="dialog" aria-modal="true" aria-labelledby="inviteModalTitle">
+  <div class="modal">
+    <div class="modal-h">
+      <div class="modal-t" id="inviteModalTitle">Invite User</div>
+      <button class="icon-btn" onclick="closeModal('inviteModal')" aria-label="Close modal">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="fld">
+        <label for="inviteName">Full Name</label>
+        <input type="text" id="inviteName" placeholder="e.g. Ahmed Al-Balushi" autocomplete="off">
+      </div>
+      <div class="fld">
+        <label for="inviteEmail">Email Address</label>
+        <input type="email" id="inviteEmail" placeholder="e.g. ahmed@contractor.om" autocomplete="off">
+      </div>
+      <div class="fld">
+        <label for="inviteRole">Role</label>
+        <select id="inviteRole">
+          <option value="Admin">Admin</option>
+          <option value="Procurement" selected>Procurement</option>
+          <option value="Finance">Finance</option>
+          <option value="Engineer">Engineer</option>
+          <option value="Viewer">Viewer</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('inviteModal')">Cancel</button>
+      <button class="btn btn-pri" onclick="confirmInvite()">Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   ERP NEXUS — shared runtime (firebase, shell, seed, helpers)
+   ============================================================ */
+
+/* ---- Firebase (shared project) ---- */
+var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
+var db=null;
+try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){console.warn('firebase init',e);}
+
+/* ---- Navigation model (shared across all modules) ---- */
+var NAV=[
+  {sec:'Overview'},
+  {id:'dashboard',label:'Command Center',ico:'◈',href:'dashboard.html'},
+  {id:'analytics',label:'Analytics',ico:'📊',href:'analytics.html'},
+  {sec:'Procurement'},
+  {id:'materials',label:'Materials',ico:'📦',href:'materials.html'},
+  {id:'suppliers',label:'Suppliers',ico:'🏭',href:'suppliers.html'},
+  {id:'offers',label:'Offers',ico:'🏷️',href:'offers.html'},
+  {id:'purchaserequests',label:'Purchase Requests',ico:'📋',href:'purchaserequests.html',badge:'pr'},
+  {sec:'Workspace'},
+  {id:'notifications',label:'Notifications',ico:'🔔',href:'notifications.html',badge:'notif'},
+  {id:'settings',label:'Settings',ico:'⚙️',href:'settings.html'}
+];
+var BOTTOM=['dashboard','materials','purchaserequests','suppliers','notifications'];
+var CURRENT='settings';
+
+/* ---- Realistic Omani construction seed data ---- */
+var SEED={
+  meta:{project:'Hadbin Road & Infrastructure',currency:'OMR'},
+  user:{name:'Salim Al-Harthy',role:'Procurement Officer',initials:'SH'},
+  materials:[
+    {id:'M-1001',name:'Bitumen 60/70 Penetration Grade',cat:'Bitumen',unit:'ton',price:285.0,date:'2026-05-22',stock:42,reorder:60,supplier:'BRIGHT LIGHT TRADING',tag:'Critical'},
+    {id:'M-1002',name:'Diesel Fuel (Gas Oil)',cat:'Fuel',unit:'liter',price:0.196,date:'2026-05-30',stock:18500,reorder:20000,supplier:'AL MAHA PETROLEUM',tag:'Fast Moving'},
+    {id:'M-1003',name:'Aggregate Stone 20mm',cat:'Stone',unit:'ton',price:4.2,date:'2026-05-18',stock:980,reorder:500,supplier:'JABAL QUARRIES LLC',tag:'Fast Moving'},
+    {id:'M-1004',name:'Crawler Crane 150T (Rental/Month)',cat:'Equipment',unit:'month',price:9800.0,date:'2026-04-11',stock:1,reorder:1,supplier:'OMAN HEAVY LIFT',tag:'Seasonal'},
+    {id:'M-1005',name:'Reinforcement Steel Bar 16mm',cat:'Steel',unit:'ton',price:312.5,date:'2026-05-27',stock:28,reorder:40,supplier:'MUSCAT STEEL',tag:'Critical'},
+    {id:'M-1006',name:'Portland Cement OPC 42.5N',cat:'Cement',unit:'bag',price:1.65,date:'2026-05-29',stock:3400,reorder:2000,supplier:'OMAN CEMENT CO',tag:'Fast Moving'},
+    {id:'M-1007',name:'Sub-base Material 0-40mm',cat:'Stone',unit:'ton',price:3.1,date:'2026-05-15',stock:1420,reorder:800},
+    {id:'M-1008',name:'MC-30 Prime Coat Emulsion',cat:'Bitumen',unit:'liter',price:0.42,date:'2026-05-20',stock:6200,reorder:5000,tag:'New'}
+  ],
+  suppliers:[
+    {id:'S-01',name:'BRIGHT LIGHT TRADING',bin:'1029384',loc:'Muscat',score:'A',phone:'+96899112233',email:'sales@brightlight.om',orders:48,onTime:96,priceVsMkt:-4},
+    {id:'S-02',name:'AL MAHA PETROLEUM',bin:'1182736',loc:'Muscat',score:'A',phone:'+96892334455',email:'b2b@almaha.om',orders:120,onTime:99,priceVsMkt:0},
+    {id:'S-03',name:'JABAL QUARRIES LLC',bin:'1044556',loc:'Jabal Akhdar',score:'B',phone:'+96895667788',email:'info@jabalq.om',orders:31,onTime:88,priceVsMkt:6},
+    {id:'S-04',name:'OMAN HEAVY LIFT',bin:'1156677',loc:'Sur',score:'B',phone:'+96894778899',email:'rentals@ohl.om',orders:14,onTime:79,priceVsMkt:9},
+    {id:'S-05',name:'AL ASM NEW',bin:'',loc:'Muscat',score:'D',phone:'+96891000111',email:'',orders:0,onTime:0,priceVsMkt:0,risk:'No trade license verified — approval blocked'}
+  ],
+  offers:[
+    {id:'O-301',supplier:'BRIGHT LIGHT TRADING',item:'Bitumen 60/70 — 100 ton',price:28200,unit:282,valid:'2026-06-05',status:'Active',insight:'-1% vs market'},
+    {id:'O-302',supplier:'OMAN HEAVY LIFT',item:'Crawler Crane 150T — 1 month',price:10900,unit:10900,valid:'2026-06-04',status:'Active',insight:'+12% higher than market average'},
+    {id:'O-303',supplier:'JABAL QUARRIES LLC',item:'Aggregate 20mm — 500 ton',price:2050,unit:4.1,valid:'2026-06-12',status:'Active',insight:'-2% vs market'},
+    {id:'O-304',supplier:'MUSCAT STEEL',item:'Rebar 16mm — 30 ton',price:9150,unit:305,valid:'2026-05-29',status:'Expired',insight:'on market'}
+  ],
+  prs:[
+    {id:'PR-1190',desc:'Bitumen 60/70 — 100 ton for Hadbin Section B',amount:28200,requester:'Eng. Khalid',stage:'Level 3',age:1,created:'2026-06-02'},
+    {id:'PR-1191',desc:'Crawler Crane 150T rental — 1 month',amount:10900,requester:'Eng. Khalid',stage:'Level 2',age:0,created:'2026-06-03'},
+    {id:'PR-1189',desc:'Diesel Fuel top-up — 20,000 L',amount:3920,requester:'Warehouse',stage:'Submitted',age:2,created:'2026-06-01'},
+    {id:'PR-1188',desc:'Aggregate 20mm — 500 ton',amount:2050,requester:'Eng. Noor',stage:'Approved',age:4,created:'2026-05-30'},
+    {id:'PR-1187',desc:'Rebar 16mm — 40 ton',amount:12500,requester:'Eng. Noor',stage:'Rejected',age:5,created:'2026-05-29'}
+  ],
+  activity:[
+    {ico:'✅',color:'green',html:'Purchase Request <b>#1188</b> approved by Finance',time:'Today · 11:30 AM'},
+    {ico:'🏷️',color:'blue',html:'New offer from <b>BRIGHT LIGHT</b> — Bitumen 100 ton',time:'Today · 09:14 AM'},
+    {ico:'📋',color:'amber',html:'<b>Eng. Khalid</b> submitted Purchase Request <b>#1191</b>',time:'Today · 08:02 AM'},
+    {ico:'⚠️',color:'red',html:'Stock alert: <b>Reinforcement Steel 16mm</b> below reorder point',time:'Yesterday · 04:40 PM'},
+    {ico:'🏭',color:'blue',html:'Supplier <b>AL ASM NEW</b> flagged — license verification required',time:'Yesterday · 02:10 PM'}
+  ]
+};
+
+/* ---- helpers ---- */
+/** @param {string} s @param {Element} [r] @returns {Element} */
+function $(s,r){return (r||document).querySelector(s);}
+
+/** @param {string} tag @param {string} [cls] @param {string} [txt] @returns {HTMLElement} */
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+
+/** @param {number} n @returns {string} */
+function fmtOMR(n){return Number(n).toLocaleString('en-OM',{minimumFractionDigits:0,maximumFractionDigits:3});}
+
+/** @returns {number} */
+function pendingPRs(){return SEED.prs.filter(function(p){return /Level|Submitted/.test(p.stage);}).length;}
+
+/** @param {string} msg */
+function toast(msg){
+  var w=$('#toastWrap');
+  var t=el('div','toast');
+  t.textContent=msg;
+  w.appendChild(t);
+  setTimeout(function(){
+    t.style.opacity='0';
+    t.style.transition='opacity .3s';
+    setTimeout(function(){t.remove();},300);
+  },3500);
+}
+
+/* ---- theme ---- */
+/**
+ * Apply a theme value to the document.
+ * @param {string} t - 'light', 'dark', or 'auto'
+ */
+function applyTheme(t){
+  if(t==='auto'){
+    var prefersDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+    document.documentElement.setAttribute('data-theme',prefersDark?'dark':'light');
+  }else{
+    document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');
+  }
+  localStorage.setItem('nexus-theme',t);
+  var b=$('#themeBtn');
+  if(b){
+    var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+    b.textContent=isDark?'☀️':'🌙';
+  }
+  renderThemeOptions();
+}
+
+/** Initialise theme from localStorage or system preference. */
+function initTheme(){
+  var saved=localStorage.getItem('nexus-theme');
+  if(!saved){
+    saved=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+  }
+  applyTheme(saved);
+  var b=$('#themeBtn');
+  if(b){
+    b.onclick=function(){
+      var current=document.documentElement.getAttribute('data-theme');
+      applyTheme(current==='dark'?'light':'dark');
+    };
+  }
+}
+
+/* ---- shell rendering (sidebar + bottom nav) ---- */
+/** Render the shared sidebar and bottom navigation. */
+function renderShell(){
+  var sb=$('#sidebar');
+  var head='<div class="sb-head"><div class="sb-mark">NX</div><div><div class="sb-brand">ERP <span>Nexus</span></div><div class="sb-ver">Procurement · v2.0</div></div></div><nav class="sb-nav">';
+  var body='';
+  NAV.forEach(function(n){
+    if(n.sec){body+='<div class="sb-sec">'+n.sec+'</div>';return;}
+    var badge='';
+    if(n.badge==='pr'&&pendingPRs())badge='<span class="nav-badge">'+pendingPRs()+'</span>';
+    if(n.badge==='notif')badge='<span class="nav-badge">5</span>';
+    body+='<a class="nav-i'+(n.id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label+badge+'</a>';
+  });
+  var foot='</nav><div class="sb-foot"><div class="u-card"><div class="u-av">'+SEED.user.initials+'</div><div style="flex:1;min-width:0"><div class="u-name">'+SEED.user.name+'</div><div class="u-role">'+SEED.user.role+'</div></div><button class="icon-btn" onclick="signOut()" aria-label="Sign out" title="Sign out">⏻</button></div></div>';
+  sb.innerHTML=head+body+foot;
+  var bn=$('#bottomNav');
+  if(bn){
+    var h='';
+    BOTTOM.forEach(function(id){
+      var n=NAV.find(function(x){return x.id===id;});
+      if(!n)return;
+      h+='<a class="bn-i'+(id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label.split(' ')[0]+'</a>';
+    });
+    bn.innerHTML=h;
+  }
+}
+
+/** Sign out the current user (demo). */
+function signOut(){toast('Signed out (demo session)');}
+
+/* ---- global search ---- */
+/** Build the full-text search index from SEED data. @returns {Array} */
+function buildSearchIndex(){
+  var ix=[];
+  SEED.materials.forEach(function(m){ix.push({grp:'Materials',ico:'📦',cls:'b-blue',name:m.name,meta:m.cat+' · '+fmtOMR(m.price)+' OMR/'+m.unit,href:'materials.html'});});
+  SEED.suppliers.forEach(function(s){ix.push({grp:'Suppliers',ico:'🏭',cls:'b-green',name:s.name,meta:s.loc+' · Score '+s.score,href:'suppliers.html'});});
+  SEED.offers.forEach(function(o){ix.push({grp:'Offers',ico:'🏷️',cls:'b-amber',name:o.item,meta:o.supplier+' · '+fmtOMR(o.price)+' OMR',href:'offers.html'});});
+  SEED.prs.forEach(function(p){ix.push({grp:'Purchase Requests',ico:'📋',cls:'b-grey',name:p.id+' — '+p.desc,meta:p.stage+' · '+fmtOMR(p.amount)+' OMR',href:'purchaserequests.html'});});
+  return ix;
+}
+
+/** Initialise the topbar global search behaviour. */
+function initSearch(){
+  var box=$('#globalSearch'),res=$('#searchResults'),ix=buildSearchIndex();
+  function run(q){
+    q=q.trim().toLowerCase();
+    if(!q){res.classList.remove('open');return;}
+    var hits=ix.filter(function(i){return (i.name+' '+i.meta).toLowerCase().indexOf(q)>-1;}).slice(0,12);
+    var groups={};
+    hits.forEach(function(h){(groups[h.grp]=groups[h.grp]||[]).push(h);});
+    var html='';
+    if(q.indexOf('crane')>-1||q.indexOf('150')>-1){html+='<div class="sr-ai">💡 Did you mean: Crawler Crane 150T?</div>';}
+    if(!hits.length){html+='<div class="sr-ai">No matches for "'+q+'"</div>';}
+    Object.keys(groups).forEach(function(g){
+      html+='<div class="sr-group">'+g+'</div>';
+      groups[g].forEach(function(h){
+        html+='<a class="sr-i" href="'+h.href+'"><span class="sr-ico badge '+h.cls+'">'+h.ico+'</span><div><div class="sr-name">'+h.name+'</div><div class="sr-meta">'+h.meta+'</div></div></a>';
+      });
+    });
+    res.innerHTML=html;
+    res.classList.add('open');
+  }
+  box.addEventListener('input',function(){run(box.value);});
+  box.addEventListener('focus',function(){if(box.value)run(box.value);});
+  document.addEventListener('click',function(e){if(!e.target.closest('.search-wrap'))res.classList.remove('open');});
+  document.addEventListener('keydown',function(e){
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();box.focus();}
+    if(e.key==='/'&&document.activeElement!==box&&!/input|textarea/i.test(document.activeElement.tagName)){e.preventDefault();box.focus();}
+    if(e.key==='Escape')res.classList.remove('open');
+  });
+}
+
+/* ---- live connection indicator ---- */
+/** Initialise the live/offline connection pill. */
+function initLive(){
+  function set(on){
+    var p=$('#livePill');
+    if(on){
+      p.classList.remove('offline');
+      p.innerHTML='<span class="live-dot"></span><span>Live</span>';
+    }else{
+      p.classList.add('offline');
+      p.innerHTML='<span class="live-dot"></span><span>Offline</span>';
+    }
+  }
+  window.addEventListener('online',function(){set(true);toast('Reconnected — syncing');});
+  window.addEventListener('offline',function(){set(false);});
+  set(navigator.onLine);
+  if(db){
+    try{db.collection('nexus_meta').doc('heartbeat').onSnapshot(function(){},function(){});}catch(e){}
+  }
+}
+
+/* ============================================================
+   MODULE H — Settings — Data & State
+   ============================================================ */
+
+/** Projects available for selection. */
+var PROJECTS=[
+  {id:'hadbin',name:'Hadbin Road & Infrastructure',loc:'Al Dakhiliyah Governorate',value:'OMR 12.4M',status:'Active'},
+  {id:'sohar',name:'Sohar Port Expansion',loc:'Al Batinah North',value:'OMR 31.7M',status:'Active'},
+  {id:'salalah',name:'Salalah Coastal Highway',loc:'Dhofar Governorate',value:'OMR 18.9M',status:'Planning'}
+];
+
+/**
+ * Approval matrix levels.
+ * Each level has: id, label, approver, threshold (upper limit in OMR, null = unlimited).
+ */
+var APPROVAL_MATRIX=[
+  {id:'l1',label:'Level 1',approver:'Site Manager',threshold:5000},
+  {id:'l2',label:'Level 2',approver:'Procurement Manager',threshold:50000},
+  {id:'l3',label:'Level 3',approver:'Finance Director',threshold:150000},
+  {id:'l4',label:'Level 4',approver:'General Manager',threshold:500000},
+  {id:'l5',label:'Level 5',approver:'CEO / Board',threshold:null}
+];
+
+/** Users for user management table. */
+var USERS=[
+  {id:'u1',name:'Salim Al-Harthy',email:'salim@nexus.om',role:'Admin',status:'Active',initials:'SH',color:'#2D7DD2'},
+  {id:'u2',name:'Khalid Al-Balushi',email:'khalid@nexus.om',role:'Engineer',status:'Active',initials:'KB',color:'#1DB06A'},
+  {id:'u3',name:'Aisha Al-Rashdi',email:'aisha@nexus.om',role:'Finance',status:'Active',initials:'AR',color:'#7C3AED'},
+  {id:'u4',name:'Noor Al-Saadi',email:'noor@nexus.om',role:'Engineer',status:'Active',initials:'NS',color:'#E8930A'},
+  {id:'u5',name:'Mohammed Al-Farsi',email:'m.farsi@nexus.om',role:'Procurement',status:'Active',initials:'MF',color:'#E8612C'},
+  {id:'u6',name:'Fatma Al-Lawati',email:'f.lawati@nexus.om',role:'Viewer',status:'Pending',initials:'FL',color:'#8A92A6'}
+];
+
+/** Currently selected demo role. */
+var currentRole='Admin';
+
+/** Currently active project id. */
+var activeProjectId=localStorage.getItem('nexus-active-project')||'hadbin';
+
+/* ============================================================
+   MODULE H — Settings — Tab Navigation
+   ============================================================ */
+
+/**
+ * Switch the visible settings section.
+ * @param {string} tab - Tab id key (e.g. 'project', 'approval').
+ */
+function switchTab(tab){
+  var tabIds=['project','approval','users','theme','backup'];
+  tabIds.forEach(function(id){
+    var tabEl=$('#tab-'+id);
+    var secEl=$('#sec-'+id);
+    if(id===tab){
+      tabEl.classList.add('active');
+      tabEl.setAttribute('aria-selected','true');
+      secEl.classList.add('visible');
+    }else{
+      tabEl.classList.remove('active');
+      tabEl.setAttribute('aria-selected','false');
+      secEl.classList.remove('visible');
+    }
+  });
+}
+
+/* ============================================================
+   MODULE H — Settings — Role-based UI
+   ============================================================ */
+
+/**
+ * Switch the demo role and update restricted section visibility.
+ * @param {string} role - New role name.
+ */
+function switchRole(role){
+  currentRole=role;
+  var badge=$('#roleBadge');
+  if(badge){
+    var classes={Admin:'admin',Procurement:'procurement',Finance:'finance',Engineer:'engineer',Viewer:'viewer'};
+    var icons={Admin:'⚙️',Procurement:'📋',Finance:'💰',Engineer:'🔧',Viewer:'👁️'};
+    badge.className='role-chip '+(classes[role]||'viewer');
+    badge.textContent=(icons[role]||'👤')+' '+role;
+  }
+  renderApprovalSection();
+  renderUsersSection();
+  toast('Viewing as '+role);
+}
+
+/**
+ * Return true if the current role has admin-level access.
+ * @returns {boolean}
+ */
+function isAdmin(){
+  return currentRole==='Admin';
+}
+
+/** Build the "Requires Admin" notice HTML. @returns {string} */
+function adminRequiredHTML(){
+  return '<div class="admin-required"><span class="admin-required-ico">🔒</span><div><strong>Requires Admin access</strong><br>This section is only available to users with the Admin role. Contact your system administrator to request elevated permissions.</div></div>';
+}
+
+/* ============================================================
+   MODULE H — Settings — Project Selector
+   ============================================================ */
+
+/** Render the project selector cards. */
+function renderProjectSelector(){
+  var grid=$('#projectGrid');
+  if(!grid)return;
+  var html='';
+  PROJECTS.forEach(function(p){
+    var isActive=(p.id===activeProjectId);
+    var statusClass=p.status==='Active'?'b-green':'b-amber';
+    html+='<div class="project-card'+(isActive?' selected':'')+'" onclick="selectProject(\''+p.id+'\')" role="radio" aria-checked="'+(isActive?'true':'false')+'" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \')selectProject(\''+p.id+'\')">';
+    html+='<div class="project-card-name">'+p.name+'</div>';
+    html+='<div class="project-card-meta">'+p.loc+'</div>';
+    html+='<div class="project-card-meta" style="margin-top:3px">Contract: '+p.value+'</div>';
+    html+='<span class="project-card-badge badge '+statusClass+'">'+p.status+'</span>';
+    if(isActive){html+='<span class="project-card-badge badge b-green" style="margin-left:6px">Current</span>';}
+    html+='</div>';
+  });
+  grid.innerHTML=html;
+  var active=PROJECTS.find(function(p){return p.id===activeProjectId;});
+  var badge=$('#activeProjectBadge');
+  if(badge&&active){badge.textContent='Active: '+active.name;}
+}
+
+/**
+ * Set the active project and persist to localStorage.
+ * @param {string} id - Project id.
+ */
+function selectProject(id){
+  activeProjectId=id;
+  localStorage.setItem('nexus-active-project',id);
+  var p=PROJECTS.find(function(x){return x.id===id;});
+  renderProjectSelector();
+  if(p){
+    toast('Project switched to: '+p.name);
+    SEED.meta.project=p.name;
+    renderShell();
+  }
+}
+
+/* ============================================================
+   MODULE H — Settings — Approval Matrix
+   ============================================================ */
+
+/** Render the approval matrix section (admin-gated). */
+function renderApprovalSection(){
+  var card=$('#approvalCard');
+  if(!card)return;
+  if(!isAdmin()){
+    card.innerHTML='<div class="sec-header"><div><div class="sec-title">Approval Matrix</div><div class="sec-sub">Amount thresholds mapped to approval levels</div></div></div>'+adminRequiredHTML();
+    return;
+  }
+  var levelClasses={l1:'l1',l2:'l2',l3:'l3',l4:'l4',l5:'l5'};
+  var html='<div class="sec-header"><div><div class="sec-title">Approval Matrix</div><div class="sec-sub">Edit thresholds and save — changes are written to Firestore</div></div><button class="btn btn-pri btn-sm" onclick="saveApprovalMatrix()">💾 Save Matrix</button></div>';
+  html+='<div style="overflow-x:auto"><table class="matrix-table" aria-label="Approval matrix">';
+  html+='<thead><tr><th>Level</th><th>Approver</th><th>Threshold (OMR)</th><th>Rule</th></tr></thead><tbody>';
+  APPROVAL_MATRIX.forEach(function(row,i){
+    var isLast=(i===APPROVAL_MATRIX.length-1);
+    var thresholdDisplay=isLast?'Unlimited':fmtOMR(row.threshold);
+    html+='<tr>';
+    html+='<td><span class="level-chip '+levelClasses[row.id]+'">'+row.label+'</span></td>';
+    html+='<td>'+row.approver+'</td>';
+    html+='<td>';
+    if(isLast){
+      html+='<input type="number" value="" disabled placeholder="≥ prev threshold" aria-label="Threshold for '+row.label+' (unlimited)">';
+    }else{
+      html+='<input type="number" id="matrix-threshold-'+row.id+'" value="'+row.threshold+'" min="0" step="100" aria-label="Threshold for '+row.label+'">';
+    }
+    html+='</td>';
+    html+='<td style="font-size:12px;color:var(--muted)">';
+    if(i===0){html+='&lt; '+thresholdDisplay+' OMR';}
+    else if(isLast){html+='&ge; '+fmtOMR(APPROVAL_MATRIX[i-1].threshold)+' OMR';}
+    else{html+=fmtOMR(APPROVAL_MATRIX[i-1].threshold)+' – '+thresholdDisplay+' OMR';}
+    html+='</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  html+='<div style="margin-top:12px;display:flex;gap:8px;align-items:center"><button class="btn btn-ghost btn-sm" onclick="addMatrixLevel()">+ Add Level</button><span style="font-size:11px;color:var(--muted)">Up to 10 levels supported</span></div>';
+  card.innerHTML=html;
+}
+
+/** Save the approval matrix to Firestore nexus_settings doc. */
+function saveApprovalMatrix(){
+  var changed=false;
+  APPROVAL_MATRIX.forEach(function(row){
+    if(row.threshold===null){return;}
+    var inp=$('#matrix-threshold-'+row.id);
+    if(inp){
+      var val=parseFloat(inp.value);
+      if(!isNaN(val)&&val>=0){
+        row.threshold=val;
+        changed=true;
+      }
+    }
+  });
+  if(!changed){toast('No changes to save');return;}
+  if(db){
+    try{
+      db.collection('nexus_settings').doc('approval_matrix').set({
+        levels:APPROVAL_MATRIX,
+        updatedAt:Date.now(),
+        updatedBy:SEED.user.name
+      });
+      toast('Approval matrix saved to Firestore');
+    }catch(e){
+      toast('Saved locally (Firestore unavailable)');
+    }
+  }else{
+    toast('Saved locally (offline mode)');
+  }
+  renderApprovalSection();
+}
+
+/** Add a placeholder new level to the approval matrix. */
+function addMatrixLevel(){
+  var count=APPROVAL_MATRIX.length;
+  if(count>=10){toast('Maximum 10 levels reached');return;}
+  var prevThreshold=APPROVAL_MATRIX[count-2]?APPROVAL_MATRIX[count-2].threshold:500000;
+  var newThreshold=prevThreshold?prevThreshold*2:1000000;
+  var lastRow=APPROVAL_MATRIX[count-1];
+  lastRow.threshold=newThreshold;
+  var newId='l'+(count+1);
+  APPROVAL_MATRIX.push({id:newId,label:'Level '+(count+1),approver:'Executive Committee',threshold:null});
+  renderApprovalSection();
+  toast('Level '+(count+1)+' added — set threshold and save');
+}
+
+/* ============================================================
+   MODULE H — Settings — User Management
+   ============================================================ */
+
+/** Render the user management section (admin-gated). */
+function renderUsersSection(){
+  var card=$('#usersCard');
+  if(!card)return;
+  if(!isAdmin()){
+    card.innerHTML='<div class="sec-header"><div><div class="sec-title">User Management</div><div class="sec-sub">Manage team access and permissions</div></div></div>'+adminRequiredHTML();
+    return;
+  }
+  var html='<div class="sec-header"><div><div class="sec-title">User Management</div><div class="sec-sub">'+USERS.length+' team members</div></div><button class="btn btn-pri btn-sm" onclick="openModal(\'inviteModal\')">+ Invite User</button></div>';
+  html+='<div style="overflow-x:auto"><table class="user-table" aria-label="User management">';
+  html+='<thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead><tbody>';
+  USERS.forEach(function(u){
+    var statusClass='status-active';
+    if(u.status==='Inactive'){statusClass='status-inactive';}
+    if(u.status==='Pending'){statusClass='status-pending';}
+    html+='<tr>';
+    html+='<td><span class="user-av" style="background:'+u.color+'">'+u.initials+'</span>'+u.name+'</td>';
+    html+='<td style="color:var(--muted);font-size:12px">'+u.email+'</td>';
+    html+='<td><select aria-label="Role for '+u.name+'" onchange="changeUserRole(\''+u.id+'\',this.value)">';
+    ['Admin','Procurement','Finance','Engineer','Viewer'].forEach(function(r){
+      html+='<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+r+'</option>';
+    });
+    html+='</select></td>';
+    html+='<td><span class="status-dot '+statusClass+'"></span>'+u.status+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  card.innerHTML=html;
+}
+
+/**
+ * Change a user's role in the local array and show a toast.
+ * @param {string} userId - User id.
+ * @param {string} newRole - New role value.
+ */
+function changeUserRole(userId,newRole){
+  var u=USERS.find(function(x){return x.id===userId;});
+  if(!u)return;
+  var oldRole=u.role;
+  u.role=newRole;
+  toast(u.name+': role changed from '+oldRole+' to '+newRole);
+}
+
+/** Open the invite user modal. */
+function confirmInvite(){
+  var name=$('#inviteName').value.trim();
+  var email=$('#inviteEmail').value.trim();
+  var role=$('#inviteRole').value;
+  if(!name){toast('Enter a name');return;}
+  if(!email){toast('Enter an email address');return;}
+  var initials=name.split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase();
+  var colors=['#2D7DD2','#1DB06A','#7C3AED','#E8930A','#E8612C'];
+  var colorIndex=USERS.length%colors.length;
+  USERS.push({
+    id:'u'+(USERS.length+1),
+    name:name,
+    email:email,
+    role:role,
+    status:'Pending',
+    initials:initials,
+    color:colors[colorIndex]
+  });
+  closeModal('inviteModal');
+  $('#inviteName').value='';
+  $('#inviteEmail').value='';
+  renderUsersSection();
+  toast('Invite sent to '+email);
+}
+
+/* ============================================================
+   MODULE H — Settings — Theme
+   ============================================================ */
+
+/** Render the theme option cards, highlighting the current selection. */
+function renderThemeOptions(){
+  var container=$('#themeOptions');
+  if(!container)return;
+  var saved=localStorage.getItem('nexus-theme')||'light';
+  var options=[
+    {value:'light',ico:'☀️',name:'Light',desc:'Clean light interface'},
+    {value:'dark',ico:'🌙',name:'Dark',desc:'Easy on the eyes at night'},
+    {value:'auto',ico:'🖥️',name:'Auto',desc:'Follows system preference'}
+  ];
+  var html='';
+  options.forEach(function(opt){
+    var isSelected=(saved===opt.value);
+    html+='<div class="theme-opt'+(isSelected?' selected':'')+'" onclick="selectTheme(\''+opt.value+'\')" role="radio" aria-checked="'+(isSelected?'true':'false')+'" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \')selectTheme(\''+opt.value+'\')">';
+    html+='<div class="theme-opt-ico">'+opt.ico+'</div>';
+    html+='<div class="theme-opt-name">'+opt.name+'</div>';
+    html+='<div class="theme-opt-desc">'+opt.desc+'</div>';
+    html+='</div>';
+  });
+  container.innerHTML=html;
+}
+
+/**
+ * Select a theme and apply it immediately.
+ * @param {string} value - 'light', 'dark', or 'auto'.
+ */
+function selectTheme(value){
+  applyTheme(value);
+  toast('Theme set to '+value.charAt(0).toUpperCase()+value.slice(1));
+}
+
+/* ============================================================
+   MODULE H — Settings — Backup & Export
+   ============================================================ */
+
+/** Render the backup action items. */
+function renderBackupActions(){
+  var container=$('#backupActions');
+  if(!container)return;
+  var items=[
+    {
+      ico:'📦',
+      bg:'rgba(232,97,44,.12)',
+      color:'var(--primary)',
+      title:'Export all data to JSON',
+      desc:'Full snapshot: materials, suppliers, offers, purchase requests, settings',
+      action:'exportJSON()',
+      btnLabel:'Download JSON',
+      btnClass:'btn-pri'
+    },
+    {
+      ico:'📊',
+      bg:'var(--blue-l)',
+      color:'var(--blue)',
+      title:'Export materials to CSV',
+      desc:'All 8 materials with price, stock and supplier details',
+      action:'exportCSV()',
+      btnLabel:'Download CSV',
+      btnClass:'btn-ghost'
+    }
+  ];
+  var html='';
+  items.forEach(function(item){
+    html+='<div class="backup-item">';
+    html+='<div class="backup-ico" style="background:'+item.bg+';color:'+item.color+'">'+item.ico+'</div>';
+    html+='<div class="backup-body"><div class="backup-title">'+item.title+'</div><div class="backup-desc">'+item.desc+'</div></div>';
+    html+='<button class="btn '+item.btnClass+' btn-sm" onclick="'+item.action+'">'+item.btnLabel+'</button>';
+    html+='</div>';
+  });
+  container.innerHTML=html;
+}
+
+/**
+ * Trigger a file download with the given content.
+ * @param {string} filename - Name for the downloaded file.
+ * @param {string} content - File content as a string.
+ * @param {string} mimeType - MIME type of the content.
+ */
+function triggerDownload(filename,content,mimeType){
+  var blob=new Blob([content],{type:mimeType});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download=filename;
+  a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){
+    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },1000);
+}
+
+/** Export all SEED + settings data to a JSON file and trigger download. */
+function exportJSON(){
+  var exportData={
+    exportedAt:new Date().toISOString(),
+    exportedBy:SEED.user.name,
+    project:PROJECTS.find(function(p){return p.id===activeProjectId;})||PROJECTS[0],
+    materials:SEED.materials,
+    suppliers:SEED.suppliers,
+    offers:SEED.offers,
+    purchaseRequests:SEED.prs,
+    approvalMatrix:APPROVAL_MATRIX,
+    users:USERS.map(function(u){return {id:u.id,name:u.name,email:u.email,role:u.role,status:u.status};}),
+    settings:{
+      activeProject:activeProjectId,
+      theme:localStorage.getItem('nexus-theme')||'light'
+    }
+  };
+  var json=JSON.stringify(exportData,null,2);
+  var filename='nexus-export-'+new Date().toISOString().slice(0,10)+'.json';
+  triggerDownload(filename,json,'application/json');
+  toast('JSON export downloaded');
+}
+
+/** Export the materials catalog to a CSV file and trigger download. */
+function exportCSV(){
+  var headers=['ID','Name','Category','Unit','Price (OMR)','Stock','Reorder Point','Supplier','Tag','Last Updated'];
+  var rows=[headers.join(',')];
+  SEED.materials.forEach(function(m){
+    var row=[
+      m.id,
+      '"'+m.name.replace(/"/g,'""')+'"',
+      m.cat,
+      m.unit,
+      m.price,
+      m.stock,
+      m.reorder||'',
+      '"'+(m.supplier||'').replace(/"/g,'""')+'"',
+      m.tag||'',
+      m.date
+    ];
+    rows.push(row.join(','));
+  });
+  var csv=rows.join('\r\n');
+  var filename='nexus-materials-'+new Date().toISOString().slice(0,10)+'.csv';
+  triggerDownload(filename,csv,'text/csv;charset=utf-8;');
+  toast('CSV export downloaded');
+}
+
+/* ============================================================
+   MODULE H — Settings — Modal helpers
+   ============================================================ */
+
+/**
+ * Open an overlay modal by id.
+ * @param {string} id - Element id of the overlay.
+ */
+function openModal(id){
+  var el=document.getElementById(id);
+  if(el)el.classList.add('open');
+}
+
+/**
+ * Close an overlay modal by id.
+ * @param {string} id - Element id of the overlay.
+ */
+function closeModal(id){
+  var el=document.getElementById(id);
+  if(el)el.classList.remove('open');
+}
+
+/* ---- Keyboard / click-outside handlers for modals ---- */
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    document.querySelectorAll('.overlay.open').forEach(function(o){o.classList.remove('open');});
+  }
+});
+document.addEventListener('click',function(e){
+  document.querySelectorAll('.overlay.open').forEach(function(o){
+    if(e.target===o){o.classList.remove('open');}
+  });
+});
+
+/* ============================================================
+   MODULE H — Settings — Boot
+   ============================================================ */
+
+/** Boot the settings module. */
+function boot(){
+  initTheme();
+  renderShell();
+  initSearch();
+  initLive();
+  renderProjectSelector();
+  renderApprovalSection();
+  renderUsersSection();
+  renderThemeOptions();
+  renderBackupActions();
+}
+
+document.addEventListener('DOMContentLoaded',boot);
+
+/* ---- PWA ---- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('nexus-sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>

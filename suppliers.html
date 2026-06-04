@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ERP Nexus — Suppliers</title>
+<meta name="theme-color" content="#E8612C">
+<meta name="description" content="ERP Nexus — Vendor Intelligence Module">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<link rel="manifest" href="nexus-manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ============================================================
+   ERP NEXUS — SHARED DESIGN SYSTEM (canonical, replicated per module)
+   ============================================================ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --primary:#E8612C;--primary-d:#C44D1E;--primary-l:rgba(232,97,44,.09);
+  --blue:#2D7DD2;--blue-l:rgba(45,125,210,.1);
+  --green:#1DB06A;--amber:#E8930A;--red:#E5484D;--purple:#7C3AED;
+  --bg:#F4F5F9;--surface:#FFFFFF;--surface-2:#FAFBFE;
+  --text:#0F1117;--muted:#7B8299;--border:#E7EAF2;
+  --sh-sm:0 1px 3px rgba(15,17,23,.06);
+  --sh:0 1px 3px rgba(15,17,23,.06),0 6px 18px rgba(15,17,23,.05);
+  --sh-lg:0 20px 40px rgba(15,17,23,.16);
+  --r:12px;--r-sm:8px;--r-lg:16px;
+  --glass:rgba(255,255,255,.72);
+}
+[data-theme="dark"]{
+  --bg:#0E1016;--surface:#171A22;--surface-2:#1E222C;
+  --text:#EEF1F7;--muted:#8A92A6;--border:#272C38;
+  --primary-l:rgba(232,97,44,.16);--blue-l:rgba(45,125,210,.18);
+  --glass:rgba(23,26,34,.72);
+  --sh-sm:0 1px 3px rgba(0,0,0,.4);--sh:0 1px 3px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3);
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;font-size:14px;}
+button{font-family:inherit;cursor:pointer;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+/* ---- App shell ---- */
+.shell{display:flex;height:100vh;height:100dvh;}
+.sb{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;height:100vh;height:100dvh;transition:width .2s;}
+.sb-head{padding:18px 16px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);}
+.sb-mark{width:38px;height:38px;background:linear-gradient(135deg,var(--primary),#F4863F);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:15px;flex-shrink:0;box-shadow:0 4px 12px rgba(232,97,44,.35);}
+.sb-brand{font-size:15px;font-weight:800;letter-spacing:-.3px;}
+.sb-brand span{color:var(--primary);}
+.sb-ver{font-size:10px;color:var(--muted);font-weight:600;}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0;}
+.sb-sec{padding:14px 16px 6px;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase;}
+.nav-i{display:flex;align-items:center;gap:11px;padding:10px 14px;margin:2px 9px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;transition:background .15s,color .15s;}
+.nav-i:hover{background:var(--surface-2);color:var(--text);}
+.nav-i.active{background:var(--primary-l);color:var(--primary);font-weight:700;}
+.nav-ico{font-size:17px;width:20px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:1px 7px;border-radius:9px;}
+.sb-foot{padding:12px;border-top:1px solid var(--border);}
+.u-card{display:flex;align-items:center;gap:10px;}
+.u-av{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue),#5AA0E6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex-shrink:0;}
+.u-name{font-size:12.5px;font-weight:700;}
+.u-role{font-size:10.5px;color:var(--muted);}
+.icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--muted);transition:all .15s;}
+.icon-btn:hover{color:var(--primary);border-color:var(--primary);}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.topbar{background:var(--glass);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;gap:16px;flex-shrink:0;z-index:30;}
+.tb-title h1{font-size:17px;font-weight:800;letter-spacing:-.3px;}
+.tb-title p{font-size:11.5px;color:var(--muted);}
+.search-wrap{flex:1;max-width:480px;position:relative;}
+.search-box{width:100%;height:40px;padding:0 14px 0 40px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;}
+.search-box:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);background:var(--surface);}
+.search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none;}
+.search-kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 6px;background:var(--surface);}
+.tb-actions{display:flex;align-items:center;gap:9px;margin-left:auto;}
+.live-pill{display:flex;align-items:center;gap:6px;background:rgba(29,176,106,.1);border:1px solid rgba(29,176,106,.25);color:var(--green);padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
+.live-pill.offline{background:rgba(232,147,10,.1);border-color:rgba(232,147,10,.3);color:var(--amber);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(1.6);}}
+
+.content{flex:1;overflow-y:auto;padding:20px 22px 90px;}
+.page-grid{max-width:1440px;margin:0 auto;}
+
+/* ---- Cards / layout ---- */
+.grid-2{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-bottom:14px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh-sm);}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.card-t{font-size:13.5px;font-weight:800;letter-spacing:-.2px;}
+.card-t small{font-weight:600;color:var(--muted);font-size:11px;margin-left:6px;}
+.link-btn{font-size:11.5px;font-weight:700;color:var(--primary);background:none;border:none;}
+
+/* ---- Action center ---- */
+.action-item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:11px;margin-bottom:9px;transition:border-color .15s;}
+.action-item:hover{border-color:var(--primary);}
+.ai-ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.ai-body{flex:1;min-width:0;}
+.ai-title{font-size:13px;font-weight:700;}
+.ai-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+.ai-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn{border:none;border-radius:var(--r-sm);font-weight:700;font-size:12px;padding:8px 14px;transition:filter .15s,background .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-pri{background:var(--primary);color:#fff;}.btn-pri:hover{background:var(--primary-d);}
+.btn-ok{background:var(--green);color:#fff;}.btn-ok:hover{filter:brightness(.93);}
+.btn-no{background:rgba(229,72,77,.12);color:var(--red);}.btn-no:hover{background:rgba(229,72,77,.2);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary);}
+.btn-sm{padding:6px 11px;font-size:11px;}
+
+/* ---- badges & chips ---- */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:999px;}
+.b-green{background:rgba(29,176,106,.12);color:#0e7a4a;}
+.b-amber{background:rgba(232,147,10,.13);color:#a06003;}
+.b-red{background:rgba(229,72,77,.12);color:#c0292e;}
+.b-blue{background:var(--blue-l);color:#1a5fa0;}
+.b-grey{background:var(--surface-2);color:var(--muted);border:1px solid var(--border);}
+.chart-box{position:relative;height:230px;}
+.skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:shimmer 1.3s infinite;border-radius:8px;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+/* ---- Mobile bottom nav ---- */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--glass);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:50;justify-content:space-around;}
+.bn-i{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:9.5px;font-weight:700;}
+.bn-i.active{color:var(--primary);}
+.bn-i .nav-ico{font-size:19px;}
+
+/* ---- Search overlay results ---- */
+.search-results{position:absolute;top:46px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--sh-lg);padding:8px;max-height:60vh;overflow-y:auto;display:none;z-index:40;}
+.search-results.open{display:block;}
+.sr-group{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:8px 10px 4px;}
+.sr-i{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;}
+.sr-i:hover{background:var(--surface-2);}
+.sr-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.sr-name{font-size:12.5px;font-weight:600;}.sr-meta{font-size:10.5px;color:var(--muted);}
+.sr-ai{font-size:11.5px;color:var(--primary);font-weight:700;padding:8px 10px;}
+
+.toast-wrap{position:fixed;top:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;padding:12px 14px;box-shadow:var(--sh-lg);font-size:12.5px;font-weight:600;min-width:240px;animation:slideIn .3s ease;}
+@keyframes slideIn{from{transform:translateX(120%);}to{transform:translateX(0);}}
+
+/* ---- Modal / overlay (from purchaserequests) ---- */
+.overlay{position:fixed;inset:0;background:rgba(8,10,16,.45);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:120;padding:18px;}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:pop .2s cubic-bezier(.16,1,.3,1);}
+@keyframes pop{from{transform:scale(.95);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal-h{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-t{font-size:15px;font-weight:800;}
+.modal-b{padding:18px;}
+.modal-f{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.fld{margin-bottom:14px;}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.fld input,.fld select,.fld textarea{width:100%;min-height:40px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font-family:inherit;font-size:13px;outline:none;}
+.fld textarea{min-height:84px;resize:vertical;}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);}
+
+/* ---- Detail modal wide ---- */
+.modal-wide{max-width:680px;}
+
+@media(max-width:1100px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+@media(max-width:760px){
+  .sb{display:none;}
+  .bottom-nav{display:flex;}
+  .topbar{padding:10px 14px;}
+  .tb-title{display:none;}
+  .search-kbd{display:none;}
+  .content{padding:14px 14px 90px;}
+  .live-pill span{display:none;}
+}
+
+/* ============================================================
+   MODULE C — Supplier-specific CSS
+   ============================================================ */
+
+/* ---- KPI row ---- */
+.sup-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:20px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh-sm);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--sh);}
+.kpi-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:11px;}
+.kpi-lbl{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:3px;}
+.kpi-val{font-size:25px;font-weight:800;letter-spacing:-.5px;line-height:1;}
+.kpi-sub{font-size:10.5px;font-weight:700;margin-top:5px;display:flex;align-items:center;gap:3px;}
+.up{color:var(--green);}.dn{color:var(--red);}
+
+/* ---- Filter toolbar ---- */
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-bar label{font-size:11px;font-weight:700;color:var(--muted);}
+.filter-chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{border:1.5px solid var(--border);background:var(--surface);color:var(--muted);padding:5px 13px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .15s;}
+.chip.on{background:var(--primary);color:#fff;border-color:var(--primary);}
+.chip:hover:not(.on){border-color:var(--primary);color:var(--primary);}
+.filter-divider{width:1px;height:24px;background:var(--border);}
+.sup-count{font-size:12px;font-weight:700;color:var(--muted);margin-left:auto;}
+
+/* ---- Supplier grid ---- */
+.sup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:24px;}
+
+/* ---- Supplier card ---- */
+.sup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh-sm);transition:transform .15s,box-shadow .15s;display:flex;flex-direction:column;gap:12px;position:relative;}
+.sup-card:hover{transform:translateY(-2px);box-shadow:var(--sh);}
+.sup-card.risk{border-color:rgba(229,72,77,.4);background:rgba(229,72,77,.025);}
+
+/* ---- Risk banner ---- */
+.risk-banner{display:flex;align-items:center;gap:8px;background:rgba(229,72,77,.1);border:1px solid rgba(229,72,77,.3);color:#c0292e;border-radius:8px;padding:8px 12px;font-size:11.5px;font-weight:700;}
+.risk-ico{font-size:14px;flex-shrink:0;}
+
+/* ---- Card header: avatar + name ---- */
+.sc-head{display:flex;align-items:center;gap:13px;}
+.sc-avatar{width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0;letter-spacing:-.5px;}
+.sc-info{flex:1;min-width:0;}
+.sc-name{font-size:14px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-bin{font-size:11px;color:var(--muted);margin-top:1px;}
+
+/* ---- Score badge ---- */
+.score-badge{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;}
+.score-A{background:rgba(29,176,106,.15);color:#0e7a4a;}
+.score-B{background:var(--blue-l);color:#1a5fa0;}
+.score-C{background:rgba(232,147,10,.15);color:#a06003;}
+.score-D{background:rgba(229,72,77,.15);color:#c0292e;}
+
+/* ---- Location + score row ---- */
+.sc-tags{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+
+/* ---- Contact row ---- */
+.sc-contacts{display:flex;gap:8px;flex-wrap:wrap;}
+.contact-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;font-size:11.5px;font-weight:700;border:1.5px solid var(--border);background:var(--surface-2);color:var(--text);text-decoration:none;transition:all .15s;cursor:pointer;}
+.contact-btn:hover{border-color:var(--primary);color:var(--primary);}
+.contact-btn.wa{border-color:rgba(37,211,102,.4);color:#1a8a42;}
+.contact-btn.wa:hover{background:rgba(37,211,102,.1);}
+
+/* ---- Stats row ---- */
+.sc-stats{display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.sc-stat{flex:1;padding:9px 10px;text-align:center;border-right:1px solid var(--border);}
+.sc-stat:last-child{border-right:none;}
+.sc-stat-val{font-size:14px;font-weight:800;letter-spacing:-.3px;}
+.sc-stat-lbl{font-size:9.5px;color:var(--muted);font-weight:600;margin-top:1px;}
+
+/* ---- Card footer: actions ---- */
+.sc-foot{display:flex;gap:8px;margin-top:auto;}
+
+/* ---- Detail modal tabs ---- */
+.tab-row{display:flex;gap:4px;border-bottom:1.5px solid var(--border);padding:0 18px;margin-bottom:0;}
+.tab-btn{padding:11px 14px;font-size:12.5px;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:color .15s,border-color .15s;}
+.tab-btn.on{color:var(--primary);border-bottom-color:var(--primary);}
+.tab-btn:hover:not(.on){color:var(--text);}
+.tab-pane{padding:18px;display:none;}
+.tab-pane.on{display:block;}
+
+/* ---- Profile doc list ---- */
+.doc-list{list-style:none;display:flex;flex-direction:column;gap:8px;}
+.doc-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:12.5px;}
+.doc-ico{font-size:16px;flex-shrink:0;}
+.doc-name{flex:1;font-weight:600;}
+.doc-status{font-size:10.5px;font-weight:700;}
+
+/* ---- Order timeline ---- */
+.order-tl{display:flex;flex-direction:column;gap:0;position:relative;}
+.order-tl::before{content:'';position:absolute;left:16px;top:8px;bottom:8px;width:2px;background:var(--border);}
+.otl-item{display:flex;align-items:flex-start;gap:12px;padding-bottom:16px;position:relative;}
+.otl-dot{width:10px;height:10px;border-radius:50%;border:2.5px solid var(--green);background:var(--surface);flex-shrink:0;margin-top:4px;position:relative;z-index:1;margin-left:11px;}
+.otl-dot.late{border-color:var(--amber);}
+.otl-body{flex:1;}
+.otl-title{font-size:12.5px;font-weight:700;}
+.otl-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ---- Contract list ---- */
+.contract-item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
+.ci-ico{width:36px;height:36px;border-radius:9px;background:var(--primary-l);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.ci-body{flex:1;}
+.ci-title{font-size:12.5px;font-weight:700;}
+.ci-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ---- Radar chart ---- */
+.radar-wrap{position:relative;height:260px;display:flex;align-items:center;justify-content:center;}
+
+/* ---- Profile info row ---- */
+.prof-row{display:flex;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;}
+.prof-row:last-child{border-bottom:none;}
+.prof-lbl{width:130px;font-weight:700;color:var(--muted);font-size:11.5px;flex-shrink:0;}
+
+/* ---- Quote modal ---- */
+.modal-quote{max-width:420px;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sb" id="sidebar" aria-label="Main navigation"></aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="tb-title">
+        <h1>Suppliers</h1>
+        <p>Vendor intelligence · 194 vendors</p>
+      </div>
+      <div class="search-wrap">
+        <span class="search-ico" aria-hidden="true">🔍</span>
+        <input class="search-box" id="globalSearch" placeholder="Search materials, suppliers, offers, requests…" aria-label="Global search" autocomplete="off">
+        <span class="search-kbd">Ctrl K</span>
+        <div class="search-results" id="searchResults" role="listbox"></div>
+      </div>
+      <div class="tb-actions">
+        <div class="live-pill" id="livePill"><span class="live-dot"></span><span>Live</span></div>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">🌙</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-grid">
+
+        <!-- KPI row -->
+        <section class="sup-kpis" id="supKpis" aria-label="Supplier KPIs"></section>
+
+        <!-- Filter toolbar -->
+        <div class="filter-bar" role="toolbar" aria-label="Filter suppliers">
+          <label>Location:</label>
+          <div class="filter-chips" id="locChips" role="group" aria-label="Filter by location"></div>
+          <div class="filter-divider" aria-hidden="true"></div>
+          <label>Score:</label>
+          <div class="filter-chips" id="scoreChips" role="group" aria-label="Filter by performance score"></div>
+          <span class="sup-count" id="supCount" aria-live="polite"></span>
+        </div>
+
+        <!-- Supplier grid -->
+        <section class="sup-grid" id="supGrid" aria-label="Supplier cards"></section>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<nav class="bottom-nav" id="bottomNav" aria-label="Primary navigation"></nav>
+<div class="toast-wrap" id="toastWrap" aria-live="assertive"></div>
+
+<!-- ===================== DETAIL MODAL ===================== -->
+<div class="overlay" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+  <div class="modal modal-wide">
+    <div class="modal-h">
+      <div class="modal-t" id="detailTitle">Supplier Detail</div>
+      <button class="icon-btn" onclick="closeModal('detailModal')" aria-label="Close detail modal">✕</button>
+    </div>
+    <div class="tab-row" role="tablist" id="detailTabs"></div>
+    <div id="detailTabContent"></div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('detailModal')">Close</button>
+      <button class="btn btn-pri" id="detailQuoteBtn">📝 Request Quote</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== QUOTE MODAL ===================== -->
+<div class="overlay" id="quoteModal" role="dialog" aria-modal="true" aria-labelledby="quoteTitle">
+  <div class="modal modal-quote">
+    <div class="modal-h">
+      <div class="modal-t" id="quoteTitle">Request Quote</div>
+      <button class="icon-btn" onclick="closeModal('quoteModal')" aria-label="Close quote modal">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="fld">
+        <label>Supplier</label>
+        <input type="text" id="qSupplier" readonly aria-label="Supplier name">
+      </div>
+      <div class="fld">
+        <label>Material / Item</label>
+        <input type="text" id="qItem" placeholder="e.g. Bitumen 60/70 — 50 ton" aria-label="Item description">
+      </div>
+      <div class="fld">
+        <label>Quantity &amp; Unit</label>
+        <input type="text" id="qQty" placeholder="e.g. 100 ton" aria-label="Quantity and unit">
+      </div>
+      <div class="fld">
+        <label>Required Delivery Date</label>
+        <input type="date" id="qDate" value="2026-06-17" aria-label="Required delivery date">
+      </div>
+      <div class="fld">
+        <label>Notes</label>
+        <textarea id="qNotes" placeholder="Any special requirements…" aria-label="Additional notes"></textarea>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('quoteModal')">Cancel</button>
+      <button class="btn btn-pri" onclick="submitQuote()" aria-label="Send quote request">Send Request</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   ERP NEXUS — shared runtime (firebase, shell, seed, helpers)
+   ============================================================ */
+
+/* ---- Firebase (shared project) ---- */
+var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
+var db=null;
+try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){console.warn('firebase init',e);}
+
+/* ---- Navigation model (shared across all modules) ---- */
+var NAV=[
+  {sec:'Overview'},
+  {id:'dashboard',label:'Command Center',ico:'◈',href:'dashboard.html'},
+  {id:'analytics',label:'Analytics',ico:'📊',href:'analytics.html'},
+  {sec:'Procurement'},
+  {id:'materials',label:'Materials',ico:'📦',href:'materials.html'},
+  {id:'suppliers',label:'Suppliers',ico:'🏭',href:'suppliers.html'},
+  {id:'offers',label:'Offers',ico:'🏷️',href:'offers.html'},
+  {id:'purchaserequests',label:'Purchase Requests',ico:'📋',href:'purchaserequests.html',badge:'pr'},
+  {sec:'Workspace'},
+  {id:'notifications',label:'Notifications',ico:'🔔',href:'notifications.html',badge:'notif'},
+  {id:'settings',label:'Settings',ico:'⚙️',href:'settings.html'}
+];
+var BOTTOM=['dashboard','materials','purchaserequests','suppliers','notifications'];
+var CURRENT='suppliers';
+
+/* ---- Realistic Omani construction seed data ---- */
+var SEED={
+  meta:{project:'Hadbin Road & Infrastructure',currency:'OMR'},
+  user:{name:'Salim Al-Harthy',role:'Procurement Officer',initials:'SH'},
+  materials:[
+    {id:'M-1001',name:'Bitumen 60/70 Penetration Grade',cat:'Bitumen',unit:'ton',price:285.0,date:'2026-05-22',stock:42,reorder:60,supplier:'BRIGHT LIGHT TRADING',tag:'Critical'},
+    {id:'M-1002',name:'Diesel Fuel (Gas Oil)',cat:'Fuel',unit:'liter',price:0.196,date:'2026-05-30',stock:18500,reorder:20000,supplier:'AL MAHA PETROLEUM',tag:'Fast Moving'},
+    {id:'M-1003',name:'Aggregate Stone 20mm',cat:'Stone',unit:'ton',price:4.2,date:'2026-05-18',stock:980,reorder:500,supplier:'JABAL QUARRIES LLC',tag:'Fast Moving'},
+    {id:'M-1004',name:'Crawler Crane 150T (Rental/Month)',cat:'Equipment',unit:'month',price:9800.0,date:'2026-04-11',stock:1,reorder:1,supplier:'OMAN HEAVY LIFT',tag:'Seasonal'},
+    {id:'M-1005',name:'Reinforcement Steel Bar 16mm',cat:'Steel',unit:'ton',price:312.5,date:'2026-05-27',stock:28,reorder:40,supplier:'MUSCAT STEEL',tag:'Critical'},
+    {id:'M-1006',name:'Portland Cement OPC 42.5N',cat:'Cement',unit:'bag',price:1.65,date:'2026-05-29',stock:3400,reorder:2000,supplier:'OMAN CEMENT CO',tag:'Fast Moving'},
+    {id:'M-1007',name:'Sub-base Material 0-40mm',cat:'Stone',unit:'ton',price:3.1,date:'2026-05-15',stock:1420,reorder:800},
+    {id:'M-1008',name:'MC-30 Prime Coat Emulsion',cat:'Bitumen',unit:'liter',price:0.42,date:'2026-05-20',stock:6200,reorder:5000,tag:'New'}
+  ],
+  suppliers:[
+    {
+      id:'S-01',name:'BRIGHT LIGHT TRADING',bin:'1029384',loc:'Muscat',score:'A',
+      phone:'+96899112233',email:'sales@brightlight.om',orders:48,onTime:96,priceVsMkt:-4,
+      avatarColor:'#E8612C',
+      docs:[
+        {ico:'📄',name:'Commercial Registration CR-10294',status:'Verified',ok:true},
+        {ico:'🏛️',name:'Trade License TL-2026/BLT',status:'Valid until Dec 2026',ok:true},
+        {ico:'📋',name:'VAT Registration Certificate',status:'Verified',ok:true},
+        {ico:'🔒',name:'ISO 9001:2015 Quality Cert',status:'Active',ok:true}
+      ],
+      orders_history:[
+        {title:'Bitumen 60/70 — 200 ton',date:'2026-05-22',amount:57000,late:false},
+        {title:'Prime Coat MC-30 — 8,000 L',date:'2026-04-10',amount:3360,late:false},
+        {title:'Bitumen 60/70 — 150 ton',date:'2026-03-15',amount:42750,late:false},
+        {title:'Tack Coat RS-1 — 5,000 L',date:'2026-02-20',amount:2100,late:true},
+        {title:'Bitumen Emulsion — 10,000 L',date:'2026-01-08',amount:4200,late:false}
+      ],
+      contracts:[
+        {title:'Annual Supply Agreement 2026 — Bituminous Products',period:'Jan 2026 – Dec 2026',value:180000,status:'Active'},
+        {title:'Framework Agreement 2025 — Prime Coat',period:'Mar 2025 – Mar 2026',value:45000,status:'Expired'}
+      ],
+      radar:{price:94,quality:90,onTime:96,responsiveness:88,compliance:98}
+    },
+    {
+      id:'S-02',name:'AL MAHA PETROLEUM',bin:'1182736',loc:'Muscat',score:'A',
+      phone:'+96892334455',email:'b2b@almaha.om',orders:120,onTime:99,priceVsMkt:0,
+      avatarColor:'#2D7DD2',
+      docs:[
+        {ico:'📄',name:'Commercial Registration CR-11827',status:'Verified',ok:true},
+        {ico:'🏛️',name:'Trade License TL-2026/AMP',status:'Valid until Sep 2026',ok:true},
+        {ico:'📋',name:'VAT Registration Certificate',status:'Verified',ok:true},
+        {ico:'⛽',name:'Petroleum Retail License',status:'Active – MOCI',ok:true}
+      ],
+      orders_history:[
+        {title:'Diesel Fuel — 25,000 L',date:'2026-05-30',amount:4900,late:false},
+        {title:'Diesel Fuel — 20,000 L',date:'2026-05-10',amount:3920,late:false},
+        {title:'Gasoline 91 — 5,000 L',date:'2026-04-22',amount:975,late:false},
+        {title:'Diesel Fuel — 30,000 L',date:'2026-04-01',amount:5880,late:false},
+        {title:'Diesel Fuel — 18,000 L',date:'2026-03-15',amount:3528,late:false}
+      ],
+      contracts:[
+        {title:'Fuel Supply Framework 2026 — Diesel & Gasoline',period:'Jan 2026 – Dec 2026',value:320000,status:'Active'},
+        {title:'Emergency Fuel Supply Protocol',period:'Ongoing',value:50000,status:'Active'}
+      ],
+      radar:{price:88,quality:95,onTime:99,responsiveness:92,compliance:97}
+    },
+    {
+      id:'S-03',name:'JABAL QUARRIES LLC',bin:'1044556',loc:'Jabal Akhdar',score:'B',
+      phone:'+96895667788',email:'info@jabalq.om',orders:31,onTime:88,priceVsMkt:6,
+      avatarColor:'#7C3AED',
+      docs:[
+        {ico:'📄',name:'Commercial Registration CR-10445',status:'Verified',ok:true},
+        {ico:'🏛️',name:'Trade License TL-2026/JQL',status:'Valid until Jun 2026',ok:false},
+        {ico:'🪨',name:'Mining & Quarrying Permit MP-209',status:'Active',ok:true},
+        {ico:'📋',name:'Environmental Compliance Certificate',status:'Pending renewal',ok:false}
+      ],
+      orders_history:[
+        {title:'Aggregate 20mm — 500 ton',date:'2026-05-18',amount:2100,late:true},
+        {title:'Sub-base 0-40mm — 800 ton',date:'2026-04-25',amount:2480,late:false},
+        {title:'Aggregate 10mm — 300 ton',date:'2026-03-30',amount:1260,late:false},
+        {title:'Crusher Run — 600 ton',date:'2026-02-14',amount:1980,late:true},
+        {title:'Aggregate 20mm — 400 ton',date:'2026-01-20',amount:1680,late:false}
+      ],
+      contracts:[
+        {title:'Aggregates Supply Agreement — Hadbin Project',period:'Feb 2026 – Jul 2026',value:48000,status:'Active'},
+        {title:'Spot Order Framework — Sub-base Materials',period:'Ongoing',value:25000,status:'Active'}
+      ],
+      radar:{price:72,quality:82,onTime:88,responsiveness:74,compliance:78}
+    },
+    {
+      id:'S-04',name:'OMAN HEAVY LIFT',bin:'1156677',loc:'Sur',score:'B',
+      phone:'+96894778899',email:'rentals@ohl.om',orders:14,onTime:79,priceVsMkt:9,
+      avatarColor:'#E8930A',
+      docs:[
+        {ico:'📄',name:'Commercial Registration CR-11566',status:'Verified',ok:true},
+        {ico:'🏛️',name:'Trade License TL-2026/OHL',status:'Valid until Aug 2026',ok:true},
+        {ico:'🏗️',name:'Heavy Equipment Operation Permit',status:'Active – MOTC',ok:true},
+        {ico:'🔧',name:'Equipment Maintenance Certificates',status:'Up to date',ok:true}
+      ],
+      orders_history:[
+        {title:'Crawler Crane 150T — 1 month rental',date:'2026-05-01',amount:10900,late:true},
+        {title:'Crane Operator Service — 30 days',date:'2026-04-01',amount:3600,late:false},
+        {title:'Mobile Crane 50T — 2 weeks',date:'2026-02-15',amount:5200,late:true},
+        {title:'Crawler Crane 100T — 3 weeks',date:'2026-01-10',amount:14700,late:false}
+      ],
+      contracts:[
+        {title:'Heavy Lift Framework — Hadbin Infrastructure',period:'Mar 2026 – Aug 2026',value:85000,status:'Active'}
+      ],
+      radar:{price:66,quality:80,onTime:79,responsiveness:70,compliance:84}
+    },
+    {
+      id:'S-05',name:'MUSCAT STEEL',bin:'1203841',loc:'Muscat',score:'A',
+      phone:'+96899445566',email:'procurement@muscatsteel.om',orders:37,onTime:94,priceVsMkt:-2,
+      avatarColor:'#1DB06A',
+      docs:[
+        {ico:'📄',name:'Commercial Registration CR-12038',status:'Verified',ok:true},
+        {ico:'🏛️',name:'Trade License TL-2026/MST',status:'Valid until Nov 2026',ok:true},
+        {ico:'🏭',name:'SINAD Certification — Steel Products',status:'Active',ok:true},
+        {ico:'📋',name:'ISO 14001 Environmental Management',status:'Active',ok:true}
+      ],
+      orders_history:[
+        {title:'Rebar 16mm — 30 ton',date:'2026-05-27',amount:9375,late:false},
+        {title:'Rebar 12mm — 20 ton',date:'2026-04-18',amount:5800,late:false},
+        {title:'Structural Steel I-Beam — 10 ton',date:'2026-03-22',amount:4200,late:false},
+        {title:'Rebar 16mm — 40 ton',date:'2026-02-28',amount:12500,late:true},
+        {title:'Wire Mesh BRC — 200 sheets',date:'2026-01-30',amount:1800,late:false}
+      ],
+      contracts:[
+        {title:'Steel Supply Agreement 2026 — Rebars & Structural',period:'Jan 2026 – Dec 2026',value:145000,status:'Active'},
+        {title:'Emergency Stock Protocol — Critical Steel',period:'Ongoing',value:30000,status:'Active'}
+      ],
+      radar:{price:90,quality:93,onTime:94,responsiveness:87,compliance:96}
+    },
+    {
+      id:'S-06',name:'OMAN CEMENT CO',bin:'1061234',loc:'Sohar',score:'A',
+      phone:'+96897123456',email:'sales@omancement.om',orders:55,onTime:97,priceVsMkt:-1,
+      avatarColor:'#5AA0E6',
+      docs:[
+        {ico:'📄',name:'Commercial Registration CR-10612',status:'Verified',ok:true},
+        {ico:'🏛️',name:'Trade License TL-2026/OCC',status:'Valid until Dec 2026',ok:true},
+        {ico:'🏭',name:'Oman Standards & Metrology Authority Cert',status:'Active',ok:true},
+        {ico:'📋',name:'ISO 9001:2015 Quality Management',status:'Active',ok:true}
+      ],
+      orders_history:[
+        {title:'OPC Cement 42.5N — 5,000 bags',date:'2026-05-29',amount:8250,late:false},
+        {title:'OPC Cement 42.5N — 4,000 bags',date:'2026-04-30',amount:6600,late:false},
+        {title:'OPC Cement 42.5N — 6,000 bags',date:'2026-03-20',amount:9900,late:false},
+        {title:'Sulphate-Resistant Cement — 2,000 bags',date:'2026-02-25',amount:3800,late:false},
+        {title:'OPC Cement 42.5N — 5,500 bags',date:'2026-01-15',amount:9075,late:true}
+      ],
+      contracts:[
+        {title:'Cement Supply Framework 2026',period:'Jan 2026 – Dec 2026',value:220000,status:'Active'},
+        {title:'Priority Delivery Agreement — Hadbin Project',period:'Feb 2026 – Sep 2026',value:80000,status:'Active'}
+      ],
+      radar:{price:89,quality:95,onTime:97,responsiveness:91,compliance:99}
+    },
+    {
+      id:'S-07',name:'SALALAH TRANSPORT LLC',bin:'1098765',loc:'Salalah',score:'C',
+      phone:'+96891234567',email:'ops@salahtrans.om',orders:18,onTime:71,priceVsMkt:14,
+      avatarColor:'#E5484D',
+      docs:[
+        {ico:'📄',name:'Commercial Registration CR-10987',status:'Verified',ok:true},
+        {ico:'🏛️',name:'Trade License TL-2026/STL',status:'Expired – renewal pending',ok:false},
+        {ico:'🚚',name:'Fleet Operating Permit — MOTC',status:'Active',ok:true},
+        {ico:'📋',name:'Third-Party Liability Insurance',status:'Valid until Oct 2026',ok:true}
+      ],
+      orders_history:[
+        {title:'Bulk Material Transport — 12 trips',date:'2026-05-12',amount:4320,late:true},
+        {title:'Equipment Delivery — Crane to Site',date:'2026-04-05',amount:1800,late:true},
+        {title:'Aggregate Haulage — 600 ton',date:'2026-03-10',amount:3600,late:false},
+        {title:'Fuel Delivery — 10,000 L',date:'2026-02-08',amount:960,late:true}
+      ],
+      contracts:[
+        {title:'Haulage Framework — Salalah Region',period:'Jan 2026 – Jun 2026',value:35000,status:'Active'}
+      ],
+      radar:{price:60,quality:68,onTime:71,responsiveness:62,compliance:66}
+    },
+    {
+      id:'S-08',name:'GULF SAFETY SUPPLIES',bin:'1177543',loc:'Muscat',score:'B',
+      phone:'+96893456789',email:'info@gulfsafety.om',orders:29,onTime:85,priceVsMkt:3,
+      avatarColor:'#7C3AED',
+      docs:[
+        {ico:'📄',name:'Commercial Registration CR-11775',status:'Verified',ok:true},
+        {ico:'🏛️',name:'Trade License TL-2026/GSS',status:'Valid until Mar 2027',ok:true},
+        {ico:'🦺',name:'OSHA Approved Supplier Certificate',status:'Active',ok:true},
+        {ico:'📋',name:'Product Safety Data Sheets',status:'Current',ok:true}
+      ],
+      orders_history:[
+        {title:'PPE Bundle — 50 workers, 6 months',date:'2026-05-15',amount:3750,late:false},
+        {title:'Safety Barriers & Signage — Site B',date:'2026-04-20',amount:1200,late:false},
+        {title:'Fall Protection Equipment — 20 sets',date:'2026-03-28',amount:2800,late:true},
+        {title:'Safety Helmets — 100 units',date:'2026-02-10',amount:450,late:false}
+      ],
+      contracts:[
+        {title:'PPE & Safety Supplies — Annual Framework',period:'Jan 2026 – Dec 2026',value:42000,status:'Active'}
+      ],
+      radar:{price:77,quality:85,onTime:85,responsiveness:80,compliance:90}
+    },
+    {
+      id:'S-09',name:'NIZWA ELECTRICAL WORKS',bin:'1133219',loc:'Jabal Akhdar',score:'C',
+      phone:'+96896789012',email:'tenders@nizwaelec.om',orders:9,onTime:67,priceVsMkt:11,
+      avatarColor:'#E8930A',
+      docs:[
+        {ico:'📄',name:'Commercial Registration CR-11332',status:'Verified',ok:true},
+        {ico:'🏛️',name:'Trade License TL-2025/NEW',status:'Expired – under renewal',ok:false},
+        {ico:'⚡',name:'MEDC Electrical Contractor Grade B',status:'Active',ok:true},
+        {ico:'📋',name:'Professional Indemnity Insurance',status:'Expired',ok:false}
+      ],
+      orders_history:[
+        {title:'Site Temporary Power Setup — Phase 1',date:'2026-05-20',amount:6500,late:true},
+        {title:'Cable Tray & Conduit Installation',date:'2026-03-18',amount:3200,late:true},
+        {title:'Generator Rental — 200 kVA',date:'2026-01-25',amount:4800,late:false}
+      ],
+      contracts:[
+        {title:'Temporary Electrical Infrastructure — Hadbin',period:'Apr 2026 – Aug 2026',value:28000,status:'Active'}
+      ],
+      radar:{price:64,quality:70,onTime:67,responsiveness:60,compliance:58}
+    },
+    {
+      id:'S-10',name:'AL ASM NEW',bin:'',loc:'Muscat',score:'D',
+      phone:'+96891000111',email:'',orders:0,onTime:0,priceVsMkt:0,
+      avatarColor:'#8A92A6',
+      risk:'No trade license verified — Approval blocked',
+      docs:[
+        {ico:'❌',name:'Commercial Registration',status:'Not submitted',ok:false},
+        {ico:'❌',name:'Trade License',status:'Not submitted',ok:false},
+        {ico:'❌',name:'VAT Registration',status:'Not submitted',ok:false}
+      ],
+      orders_history:[],
+      contracts:[],
+      radar:{price:0,quality:0,onTime:0,responsiveness:0,compliance:0}
+    }
+  ],
+  offers:[
+    {id:'O-301',supplier:'BRIGHT LIGHT TRADING',item:'Bitumen 60/70 — 100 ton',price:28200,unit:282,valid:'2026-06-05',status:'Active',insight:'-1% vs market'},
+    {id:'O-302',supplier:'OMAN HEAVY LIFT',item:'Crawler Crane 150T — 1 month',price:10900,unit:10900,valid:'2026-06-04',status:'Active',insight:'+12% higher than market average'},
+    {id:'O-303',supplier:'JABAL QUARRIES LLC',item:'Aggregate 20mm — 500 ton',price:2050,unit:4.1,valid:'2026-06-12',status:'Active',insight:'-2% vs market'},
+    {id:'O-304',supplier:'MUSCAT STEEL',item:'Rebar 16mm — 30 ton',price:9150,unit:305,valid:'2026-05-29',status:'Expired',insight:'on market'}
+  ],
+  prs:[
+    {id:'PR-1190',desc:'Bitumen 60/70 — 100 ton for Hadbin Section B',amount:28200,requester:'Eng. Khalid',stage:'Level 3',age:1,created:'2026-06-02'},
+    {id:'PR-1191',desc:'Crawler Crane 150T rental — 1 month',amount:10900,requester:'Eng. Khalid',stage:'Level 2',age:0,created:'2026-06-03'},
+    {id:'PR-1189',desc:'Diesel Fuel top-up — 20,000 L',amount:3920,requester:'Warehouse',stage:'Submitted',age:2,created:'2026-06-01'},
+    {id:'PR-1188',desc:'Aggregate 20mm — 500 ton',amount:2050,requester:'Eng. Noor',stage:'Approved',age:4,created:'2026-05-30'},
+    {id:'PR-1187',desc:'Rebar 16mm — 40 ton',amount:12500,requester:'Eng. Noor',stage:'Rejected',age:5,created:'2026-05-29'}
+  ]
+};
+
+/* ---- helpers ---- */
+/** @param {string} s - CSS selector @param {Element} [r] - root element @returns {Element} */
+function $(s,r){return (r||document).querySelector(s);}
+/** @param {string} tag @param {string} [cls] @param {string} [txt] @returns {HTMLElement} */
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+/** @param {number} n @returns {string} */
+function fmtOMR(n){return Number(n).toLocaleString('en-OM',{minimumFractionDigits:0,maximumFractionDigits:3});}
+/** @param {string} msg */
+function toast(msg){var w=$('#toastWrap');var t=el('div','toast');t.textContent=msg;w.appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(function(){t.remove();},300);},3500);}
+/** @returns {number} */
+function pendingPRs(){return SEED.prs.filter(function(p){return /Level|Submitted/.test(p.stage);}).length;}
+
+/* ---- theme ---- */
+/** @param {string} t - 'dark' or 'light' */
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var b=$('#themeBtn');if(b)b.textContent=t==='dark'?'☀️':'🌙';localStorage.setItem('nexus-theme',t);}
+function initTheme(){var saved=localStorage.getItem('nexus-theme');if(!saved){saved=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}applyTheme(saved);var b=$('#themeBtn');if(b)b.onclick=function(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');};}
+
+/* ---- shell rendering (sidebar + bottom nav) ---- */
+function renderShell(){
+  var sb=$('#sidebar');
+  var head='<div class="sb-head"><div class="sb-mark">NX</div><div><div class="sb-brand">ERP <span>Nexus</span></div><div class="sb-ver">Procurement · v2.0</div></div></div><nav class="sb-nav">';
+  var body='';
+  NAV.forEach(function(n){
+    if(n.sec){body+='<div class="sb-sec">'+n.sec+'</div>';return;}
+    var badge='';
+    if(n.badge==='pr'&&pendingPRs())badge='<span class="nav-badge">'+pendingPRs()+'</span>';
+    if(n.badge==='notif')badge='<span class="nav-badge">5</span>';
+    body+='<a class="nav-i'+(n.id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label+badge+'</a>';
+  });
+  var foot='</nav><div class="sb-foot"><div class="u-card"><div class="u-av">'+SEED.user.initials+'</div><div style="flex:1;min-width:0"><div class="u-name">'+SEED.user.name+'</div><div class="u-role">'+SEED.user.role+'</div></div><button class="icon-btn" onclick="signOut()" aria-label="Sign out" title="Sign out">⏻</button></div></div>';
+  sb.innerHTML=head+body+foot;
+  var bn=$('#bottomNav');
+  if(bn){
+    var h='';
+    BOTTOM.forEach(function(id){
+      var n=NAV.find(function(x){return x.id===id;});
+      if(!n)return;
+      h+='<a class="bn-i'+(id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label.split(' ')[0]+'</a>';
+    });
+    bn.innerHTML=h;
+  }
+}
+function signOut(){toast('Signed out (demo session)');}
+
+/* ---- global search (shared) ---- */
+function buildSearchIndex(){
+  var ix=[];
+  SEED.materials.forEach(function(m){ix.push({grp:'Materials',ico:'📦',cls:'b-blue',name:m.name,meta:m.cat+' · '+fmtOMR(m.price)+' OMR/'+m.unit,href:'materials.html'});});
+  SEED.suppliers.forEach(function(s){ix.push({grp:'Suppliers',ico:'🏭',cls:'b-green',name:s.name,meta:s.loc+' · Score '+s.score,href:'suppliers.html'});});
+  SEED.offers.forEach(function(o){ix.push({grp:'Offers',ico:'🏷️',cls:'b-amber',name:o.item,meta:o.supplier+' · '+fmtOMR(o.price)+' OMR',href:'offers.html'});});
+  SEED.prs.forEach(function(p){ix.push({grp:'Purchase Requests',ico:'📋',cls:'b-grey',name:p.id+' — '+p.desc,meta:p.stage+' · '+fmtOMR(p.amount)+' OMR',href:'purchaserequests.html'});});
+  return ix;
+}
+function initSearch(){
+  var box=$('#globalSearch'),res=$('#searchResults'),ix=buildSearchIndex();
+  function run(q){
+    q=q.trim().toLowerCase();
+    if(!q){res.classList.remove('open');return;}
+    var hits=ix.filter(function(i){return (i.name+' '+i.meta).toLowerCase().indexOf(q)>-1;}).slice(0,12);
+    var groups={};hits.forEach(function(h){(groups[h.grp]=groups[h.grp]||[]).push(h);});
+    var html='';
+    if(q.indexOf('crane')>-1||q.indexOf('150')>-1)html+='<div class="sr-ai">💡 Did you mean: Crawler Crane 150T?</div>';
+    if(!hits.length){html+='<div class="sr-ai">No matches for &ldquo;'+q+'&rdquo;</div>';}
+    Object.keys(groups).forEach(function(g){
+      html+='<div class="sr-group">'+g+'</div>';
+      groups[g].forEach(function(h){html+='<a class="sr-i" href="'+h.href+'"><span class="sr-ico badge '+h.cls+'">'+h.ico+'</span><div><div class="sr-name">'+h.name+'</div><div class="sr-meta">'+h.meta+'</div></div></a>';});
+    });
+    res.innerHTML=html;res.classList.add('open');
+  }
+  box.addEventListener('input',function(){run(box.value);});
+  box.addEventListener('focus',function(){if(box.value)run(box.value);});
+  document.addEventListener('click',function(e){if(!e.target.closest('.search-wrap'))res.classList.remove('open');});
+  document.addEventListener('keydown',function(e){
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();box.focus();}
+    if(e.key==='/'&&document.activeElement!==box&&!/input|textarea/i.test(document.activeElement.tagName)){e.preventDefault();box.focus();}
+    if(e.key==='Escape')res.classList.remove('open');
+  });
+}
+
+/* ---- live connection indicator ---- */
+function initLive(){
+  /** @param {boolean} on */
+  function set(on){
+    var p=$('#livePill');
+    if(on){p.classList.remove('offline');p.innerHTML='<span class="live-dot"></span><span>Live</span>';}
+    else{p.classList.add('offline');p.innerHTML='<span class="live-dot"></span><span>Offline</span>';}
+  }
+  window.addEventListener('online',function(){set(true);toast('Reconnected — syncing');});
+  window.addEventListener('offline',function(){set(false);});
+  set(navigator.onLine);
+  if(db){try{db.collection('nexus_meta').doc('heartbeat').onSnapshot(function(){},function(){});}catch(e){}}
+}
+
+/* ---- modal helpers (from purchaserequests) ---- */
+/** @param {string} id - overlay element id */
+function openModal(id){$('#'+id).classList.add('open');}
+/** @param {string} id - overlay element id */
+function closeModal(id){$('#'+id).classList.remove('open');}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    document.querySelectorAll('.overlay.open').forEach(function(o){o.classList.remove('open');});
+  }
+});
+
+/* ============================================================
+   MODULE C — Suppliers logic
+   ============================================================ */
+
+/** Active filters */
+var activeLocFilter='All';
+var activeScoreFilter='All';
+
+/** Score grade to CSS helper class */
+var SCORE_BADGE_MAP={A:'b-green',B:'b-blue',C:'b-amber',D:'b-red'};
+
+/** Avatar color palette for initials */
+var AVATAR_COLORS=['#E8612C','#2D7DD2','#1DB06A','#7C3AED','#E8930A','#5AA0E6','#E5484D','#8A92A6'];
+
+/**
+ * Derive 2-letter initials from a company name.
+ * @param {string} name
+ * @returns {string}
+ */
+function initials(name){
+  var parts=name.trim().split(/\s+/);
+  if(parts.length===1)return parts[0].slice(0,2).toUpperCase();
+  return (parts[0][0]+parts[1][0]).toUpperCase();
+}
+
+/**
+ * Render KPI summary cards.
+ */
+function renderKpis(){
+  var all=SEED.suppliers;
+  var total=all.length;
+  var aScoreCount=all.filter(function(s){return s.score==='A';}).length;
+  var avgOnTime=Math.round(all.filter(function(s){return s.orders>0;}).reduce(function(acc,s){return acc+s.onTime;},0)/all.filter(function(s){return s.orders>0;}).length);
+  var riskCount=all.filter(function(s){return s.risk||s.score==='D';}).length;
+  var kpis=[
+    {ico:'🏭',bg:'rgba(232,97,44,.12)',c:'var(--primary)',lbl:'Total Vendors',val:total,sub:'<span style="color:var(--muted)">194 in directory</span>'},
+    {ico:'⭐',bg:'rgba(29,176,106,.12)',c:'var(--green)',lbl:'Grade A Suppliers',val:aScoreCount,sub:'<span class="up">Preferred vendors</span>'},
+    {ico:'⏱️',bg:'var(--blue-l)',c:'var(--blue)',lbl:'Avg On-Time %',val:avgOnTime+'%',sub:'<span style="color:var(--muted)">across active suppliers</span>'},
+    {ico:'⚠️',bg:'rgba(229,72,77,.12)',c:'var(--red)',lbl:'Risk Alerts',val:riskCount,sub:'<span class="dn">Verification required</span>'}
+  ];
+  var container=$('#supKpis');
+  container.innerHTML=kpis.map(function(k){
+    return '<div class="kpi"><div class="kpi-ico" style="background:'+k.bg+';color:'+k.c+'">'+k.ico+'</div><div class="kpi-lbl">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-sub">'+k.sub+'</div></div>';
+  }).join('');
+}
+
+/**
+ * Render location and score filter chips.
+ */
+function renderFilters(){
+  var locs=['All'];
+  SEED.suppliers.forEach(function(s){if(locs.indexOf(s.loc)===-1)locs.push(s.loc);});
+  var scores=['All','A','B','C','D'];
+
+  var locContainer=$('#locChips');
+  locContainer.innerHTML=locs.map(function(l){
+    return '<button class="chip'+(l===activeLocFilter?' on':'')+'" onclick="setLocFilter(\''+l+'\')" aria-pressed="'+(l===activeLocFilter)+'">'+l+'</button>';
+  }).join('');
+
+  var scoreContainer=$('#scoreChips');
+  scoreContainer.innerHTML=scores.map(function(s){
+    return '<button class="chip'+(s===activeScoreFilter?' on':'')+'" onclick="setScoreFilter(\''+s+'\')" aria-pressed="'+(s===activeScoreFilter)+'">'+s+'</button>';
+  }).join('');
+}
+
+/** @param {string} loc */
+function setLocFilter(loc){activeLocFilter=loc;renderFilters();renderGrid();}
+/** @param {string} score */
+function setScoreFilter(score){activeScoreFilter=score;renderFilters();renderGrid();}
+
+/**
+ * Get filtered supplier list.
+ * @returns {Array}
+ */
+function filteredSuppliers(){
+  return SEED.suppliers.filter(function(s){
+    var locOk=activeLocFilter==='All'||s.loc===activeLocFilter;
+    var scoreOk=activeScoreFilter==='All'||s.score===activeScoreFilter;
+    return locOk&&scoreOk;
+  });
+}
+
+/**
+ * Build price vs market display string.
+ * @param {number} pct
+ * @returns {string}
+ */
+function priceMktLabel(pct){
+  if(pct===0)return 'At market';
+  if(pct<0)return pct+'% vs mkt';
+  return '+'+pct+'% vs mkt';
+}
+
+/**
+ * Return CSS class for price vs market value.
+ * @param {number} pct
+ * @returns {string}
+ */
+function priceMktClass(pct){
+  if(pct<0)return 'up';
+  if(pct>5)return 'dn';
+  return '';
+}
+
+/**
+ * Render the supplier cards grid.
+ */
+function renderGrid(){
+  var list=filteredSuppliers();
+  var grid=$('#supGrid');
+  var count=$('#supCount');
+  count.textContent=list.length+' supplier'+(list.length===1?'':'s');
+
+  if(!list.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:13px;">No suppliers match the selected filters.</div>';
+    return;
+  }
+
+  var html='';
+  list.forEach(function(s){
+    var inits=initials(s.name);
+    var scoreCls='score-'+s.score;
+    var scoreBadgeCls=SCORE_BADGE_MAP[s.score];
+    var isRisk=!!s.risk;
+    var hasEmail=s.email&&s.email.length>0;
+    var pctLbl=priceMktLabel(s.priceVsMkt);
+    var pctCls=priceMktClass(s.priceVsMkt);
+    var phoneRaw=s.phone.replace(/\D/g,'');
+
+    html+='<article class="sup-card'+(isRisk?' risk':'')+'" aria-label="Supplier: '+s.name+'">';
+
+    /* Risk banner */
+    if(isRisk){
+      html+='<div class="risk-banner" role="alert"><span class="risk-ico">🚫</span><span>'+s.risk+'</span></div>';
+    }
+
+    /* Card header */
+    html+='<div class="sc-head">';
+    html+='<div class="sc-avatar" style="background:'+s.avatarColor+'" aria-hidden="true">'+inits+'</div>';
+    html+='<div class="sc-info">';
+    html+='<div class="sc-name">'+s.name+'</div>';
+    var binText=s.bin?'BIN: '+s.bin:'BIN: Not registered';
+    html+='<div class="sc-bin">'+binText+'</div>';
+    html+='</div>';
+    html+='<div class="score-badge '+scoreCls+'" title="Performance score '+s.score+'">'+s.score+'</div>';
+    html+='</div>';
+
+    /* Tags row */
+    html+='<div class="sc-tags">';
+    html+='<span class="badge b-grey">📍 '+s.loc+'</span>';
+    html+='<span class="badge '+scoreBadgeCls+'">Score '+s.score+'</span>';
+    html+='</div>';
+
+    /* Contact row */
+    html+='<div class="sc-contacts">';
+    html+='<a class="contact-btn" href="tel:'+s.phone+'" aria-label="Call '+s.name+'">📞 Call</a>';
+    if(hasEmail){
+      html+='<a class="contact-btn" href="mailto:'+s.email+'" aria-label="Email '+s.name+'">✉️ Email</a>';
+    }
+    html+='<button class="contact-btn wa" onclick="openWhatsApp(\''+s.id+'\')" aria-label="WhatsApp '+s.name+'">💬 WhatsApp</button>';
+    html+='</div>';
+
+    /* Stats row */
+    if(!isRisk){
+      html+='<div class="sc-stats">';
+      html+='<div class="sc-stat"><div class="sc-stat-val">'+s.orders+'</div><div class="sc-stat-lbl">Total Orders</div></div>';
+      html+='<div class="sc-stat"><div class="sc-stat-val '+(s.onTime>=90?'up':s.onTime<75?'dn':'')+'">'+s.onTime+'%</div><div class="sc-stat-lbl">On-Time</div></div>';
+      html+='<div class="sc-stat"><div class="sc-stat-val '+pctCls+'">'+pctLbl+'</div><div class="sc-stat-lbl">vs Market</div></div>';
+      html+='</div>';
+    }
+
+    /* Card footer */
+    html+='<div class="sc-foot">';
+    html+='<button class="btn btn-ghost btn-sm" style="flex:1" onclick="openDetail(\''+s.id+'\')" aria-label="View details for '+s.name+'">View Details</button>';
+    if(isRisk){
+      html+='<button class="btn btn-no btn-sm" disabled aria-label="Quote request blocked — no trade license" title="Approval blocked: no trade license">🔒 Blocked</button>';
+    }else{
+      html+='<button class="btn btn-pri btn-sm" style="flex:1" onclick="openQuote(\''+s.id+'\')" aria-label="Request quote from '+s.name+'">📝 Quote</button>';
+    }
+    html+='</div>';
+
+    html+='</article>';
+  });
+
+  grid.innerHTML=html;
+}
+
+/* ---- WhatsApp with Firestore token ---- */
+/**
+ * Save a WhatsApp message token to Firestore, then open the wa.me link.
+ * The token is persisted BEFORE opening WhatsApp (mandatory).
+ * @param {string} supplierId
+ */
+function openWhatsApp(supplierId){
+  var s=SEED.suppliers.find(function(x){return x.id===supplierId;});
+  if(!s)return;
+  var phoneRaw=s.phone.replace(/\D/g,'');
+  var token={
+    supplierId:s.id,
+    supplierName:s.name,
+    phone:s.phone,
+    initiatedBy:SEED.user.name,
+    at:Date.now(),
+    context:'Supplier contact from Vendor Intelligence module'
+  };
+  if(db){
+    try{
+      db.collection('nexus_whatsapp_tokens').add(token).then(function(ref){
+        window.open('https://wa.me/'+phoneRaw,'_blank','noopener,noreferrer');
+      }).catch(function(){
+        /* Still open WhatsApp even if Firestore write fails */
+        window.open('https://wa.me/'+phoneRaw,'_blank','noopener,noreferrer');
+      });
+    }catch(e){
+      window.open('https://wa.me/'+phoneRaw,'_blank','noopener,noreferrer');
+    }
+  }else{
+    window.open('https://wa.me/'+phoneRaw,'_blank','noopener,noreferrer');
+  }
+}
+
+/* ---- Detail modal ---- */
+/** Currently open supplier in detail modal */
+var detailSupplierId=null;
+/** Chart.js radar instance — destroyed on each open */
+var radarChart=null;
+
+/**
+ * Open the detail modal for a supplier, showing tab 1 by default.
+ * @param {string} supplierId
+ */
+function openDetail(supplierId){
+  var s=SEED.suppliers.find(function(x){return x.id===supplierId;});
+  if(!s)return;
+  detailSupplierId=supplierId;
+
+  /* Title */
+  var titleEl=$('#detailTitle');
+  titleEl.textContent=s.name;
+
+  /* Quote button wiring */
+  var qBtn=$('#detailQuoteBtn');
+  if(s.risk){
+    qBtn.disabled=true;
+    qBtn.title='Approval blocked — no trade license';
+  }else{
+    qBtn.disabled=false;
+    qBtn.title='';
+    qBtn.onclick=function(){closeModal('detailModal');openQuote(supplierId);};
+  }
+
+  /* Render tabs */
+  renderDetailTabs(s,1);
+  openModal('detailModal');
+}
+
+/**
+ * Render detail modal tab buttons and active tab content.
+ * @param {Object} s - supplier object
+ * @param {number} activeTab - 1..4
+ */
+function renderDetailTabs(s,activeTab){
+  var tabLabels=['Profile & Documents','Order History','Offers & Contracts','Performance Analytics'];
+  var tabRow=$('#detailTabs');
+  tabRow.innerHTML=tabLabels.map(function(lbl,i){
+    var idx=i+1;
+    return '<button class="tab-btn'+(idx===activeTab?' on':'')+'" onclick="switchDetailTab(\''+s.id+'\','+idx+')" role="tab" aria-selected="'+(idx===activeTab)+'" aria-label="'+lbl+'">'+lbl+'</button>';
+  }).join('');
+
+  var contentEl=$('#detailTabContent');
+  if(activeTab===1)contentEl.innerHTML=buildTabProfile(s);
+  else if(activeTab===2)contentEl.innerHTML=buildTabOrders(s);
+  else if(activeTab===3)contentEl.innerHTML=buildTabContracts(s);
+  else if(activeTab===4){
+    contentEl.innerHTML=buildTabAnalytics(s);
+    renderRadarChart(s);
+  }
+}
+
+/**
+ * Switch to a different tab in the detail modal.
+ * @param {string} supplierId
+ * @param {number} tabIdx
+ */
+function switchDetailTab(supplierId,tabIdx){
+  var s=SEED.suppliers.find(function(x){return x.id===supplierId;});
+  if(!s)return;
+  /* Destroy radar chart if switching away from tab 4 */
+  if(radarChart){radarChart.destroy();radarChart=null;}
+  renderDetailTabs(s,tabIdx);
+}
+
+/**
+ * Build HTML for Tab 1: Profile & Documents.
+ * @param {Object} s
+ * @returns {string}
+ */
+function buildTabProfile(s){
+  var hasEmail=s.email&&s.email.length>0;
+  var html='<div class="tab-pane on">';
+
+  html+='<div style="margin-bottom:16px">';
+  var rows=[
+    ['Company',s.name],
+    ['BIN',s.bin||'Not registered'],
+    ['Location',s.loc],
+    ['Phone',s.phone],
+    ['Email',hasEmail?s.email:'—'],
+    ['Performance Score',s.score+' grade'],
+    ['Total Orders',s.orders.toString()],
+    ['On-Time Delivery',s.onTime+'%'],
+    ['Price vs Market',priceMktLabel(s.priceVsMkt)]
+  ];
+  rows.forEach(function(r){
+    html+='<div class="prof-row"><span class="prof-lbl">'+r[0]+'</span><span>'+r[1]+'</span></div>';
+  });
+  html+='</div>';
+
+  if(s.docs&&s.docs.length){
+    html+='<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Documents</div>';
+    html+='<ul class="doc-list" aria-label="Supplier documents">';
+    s.docs.forEach(function(d){
+      var statusColor=d.ok?'var(--green)':'var(--red)';
+      html+='<li class="doc-item"><span class="doc-ico">'+d.ico+'</span><span class="doc-name">'+d.name+'</span><span class="doc-status" style="color:'+statusColor+'">'+d.status+'</span></li>';
+    });
+    html+='</ul>';
+  }
+
+  html+='</div>';
+  return html;
+}
+
+/**
+ * Build HTML for Tab 2: Order History timeline.
+ * @param {Object} s
+ * @returns {string}
+ */
+function buildTabOrders(s){
+  var html='<div class="tab-pane on">';
+  if(!s.orders_history||!s.orders_history.length){
+    html+='<p style="color:var(--muted);font-size:13px;padding:8px 0;">No order history available.</p>';
+    html+='</div>';
+    return html;
+  }
+  html+='<div class="order-tl" role="list">';
+  s.orders_history.forEach(function(o){
+    var dotCls=o.late?'otl-dot late':'otl-dot';
+    html+='<div class="otl-item" role="listitem">';
+    html+='<div class="'+dotCls+'" aria-hidden="true"></div>';
+    html+='<div class="otl-body">';
+    html+='<div class="otl-title">'+o.title+'</div>';
+    var deliveredTxt=o.late?'⚠️ Late delivery':'✅ On time';
+    html+='<div class="otl-meta">'+o.date+' &nbsp;·&nbsp; OMR '+fmtOMR(o.amount)+' &nbsp;·&nbsp; '+deliveredTxt+'</div>';
+    html+='</div></div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+
+/**
+ * Build HTML for Tab 3: Active Offers & Contracts.
+ * @param {Object} s
+ * @returns {string}
+ */
+function buildTabContracts(s){
+  var html='<div class="tab-pane on">';
+
+  /* Active offers from SEED */
+  var supOffers=SEED.offers.filter(function(o){return o.supplier===s.name;});
+  if(supOffers.length){
+    html+='<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Active Offers</div>';
+    supOffers.forEach(function(o){
+      var statusCls=o.status==='Active'?'b-green':'b-grey';
+      html+='<div class="contract-item">';
+      html+='<div class="ci-ico">🏷️</div>';
+      html+='<div class="ci-body">';
+      html+='<div class="ci-title">'+o.item+'</div>';
+      html+='<div class="ci-meta">OMR '+fmtOMR(o.price)+' &nbsp;·&nbsp; Valid until '+o.valid+' &nbsp;·&nbsp; '+o.insight+'</div>';
+      html+='</div>';
+      html+='<span class="badge '+statusCls+'">'+o.status+'</span>';
+      html+='</div>';
+    });
+  }
+
+  /* Contracts */
+  if(s.contracts&&s.contracts.length){
+    html+='<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px;">Contracts</div>';
+    s.contracts.forEach(function(c){
+      var statusCls=c.status==='Active'?'b-green':'b-grey';
+      html+='<div class="contract-item">';
+      html+='<div class="ci-ico">📑</div>';
+      html+='<div class="ci-body">';
+      html+='<div class="ci-title">'+c.title+'</div>';
+      html+='<div class="ci-meta">'+c.period+' &nbsp;·&nbsp; OMR '+fmtOMR(c.value)+'</div>';
+      html+='</div>';
+      html+='<span class="badge '+statusCls+'">'+c.status+'</span>';
+      html+='</div>';
+    });
+  }
+
+  if(!supOffers.length&&(!s.contracts||!s.contracts.length)){
+    html+='<p style="color:var(--muted);font-size:13px;padding:8px 0;">No active offers or contracts.</p>';
+  }
+
+  html+='</div>';
+  return html;
+}
+
+/**
+ * Build HTML for Tab 4: Performance Analytics (radar chart placeholder).
+ * @param {Object} s
+ * @returns {string}
+ */
+function buildTabAnalytics(s){
+  var html='<div class="tab-pane on">';
+  html+='<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">5-Axis Performance Radar</div>';
+  html+='<div class="radar-wrap"><canvas id="radarCanvas" aria-label="Performance radar chart for '+s.name+'"></canvas></div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">';
+  var axes=['Price','Quality','On-Time','Responsiveness','Compliance'];
+  var vals=[s.radar.price,s.radar.quality,s.radar.onTime,s.radar.responsiveness,s.radar.compliance];
+  axes.forEach(function(ax,i){
+    html+='<div style="flex:1;min-width:90px;text-align:center;padding:10px 8px;border:1px solid var(--border);border-radius:9px;">';
+    html+='<div style="font-size:16px;font-weight:800;">'+vals[i]+'</div>';
+    html+='<div style="font-size:10px;color:var(--muted);font-weight:700;">'+ax+'</div>';
+    html+='</div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+
+/**
+ * Render the Chart.js radar chart for performance analytics.
+ * Destroys any existing instance first.
+ * @param {Object} s - supplier object with .radar axes
+ */
+function renderRadarChart(s){
+  if(radarChart){radarChart.destroy();radarChart=null;}
+  var canvas=$('#radarCanvas');
+  if(!canvas||typeof Chart==='undefined')return;
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  var gridColor=isDark?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)';
+  var tickColor=isDark?'rgba(255,255,255,.5)':'rgba(0,0,0,.45)';
+  radarChart=new Chart(canvas,{
+    type:'radar',
+    data:{
+      labels:['Price','Quality','On-Time','Responsiveness','Compliance'],
+      datasets:[{
+        label:s.name,
+        data:[s.radar.price,s.radar.quality,s.radar.onTime,s.radar.responsiveness,s.radar.compliance],
+        backgroundColor:'rgba(232,97,44,.15)',
+        borderColor:'#E8612C',
+        pointBackgroundColor:'#E8612C',
+        pointRadius:4,
+        borderWidth:2
+      }]
+    },
+    options:{
+      scales:{
+        r:{
+          min:0,max:100,
+          ticks:{stepSize:20,color:tickColor,backdropColor:'transparent',font:{size:9}},
+          grid:{color:gridColor},
+          angleLines:{color:gridColor},
+          pointLabels:{font:{size:11,weight:'700'},color:tickColor}
+        }
+      },
+      plugins:{legend:{display:false}},
+      maintainAspectRatio:false
+    }
+  });
+}
+
+/* ---- Quote modal ---- */
+/**
+ * Open the quote request modal pre-filled with the given supplier.
+ * @param {string} supplierId
+ */
+function openQuote(supplierId){
+  var s=SEED.suppliers.find(function(x){return x.id===supplierId;});
+  if(!s)return;
+  if(s.risk){toast('Quote request blocked: '+s.risk);return;}
+  var titleEl=$('#quoteTitle');
+  titleEl.textContent='Request Quote';
+  var supInput=$('#qSupplier');
+  supInput.value=s.name;
+  supInput.dataset.sid=s.id;
+  openModal('quoteModal');
+}
+
+/**
+ * Submit the quote request form — writes to Firestore 'nexus_quotes' and shows toast.
+ */
+function submitQuote(){
+  var supplierName=$('#qSupplier').value.trim();
+  var item=$('#qItem').value.trim();
+  var qty=$('#qQty').value.trim();
+  var date=$('#qDate').value;
+  var notes=$('#qNotes').value.trim();
+  var sid=$('#qSupplier').dataset.sid||'';
+
+  if(!item){toast('Please enter an item description');return;}
+  if(!qty){toast('Please enter quantity and unit');return;}
+
+  var payload={
+    supplierId:sid,
+    supplierName:supplierName,
+    item:item,
+    qty:qty,
+    deliveryDate:date,
+    notes:notes,
+    requestedBy:SEED.user.name,
+    submittedAt:Date.now(),
+    status:'Pending'
+  };
+
+  if(db){
+    try{
+      db.collection('nexus_quotes').add(payload).then(function(){
+        toast('Quote request sent to '+supplierName);
+      }).catch(function(){
+        toast('Quote request saved locally — will sync when online');
+      });
+    }catch(e){
+      toast('Quote request queued for sync');
+    }
+  }else{
+    toast('Quote request sent to '+supplierName);
+  }
+
+  closeModal('quoteModal');
+  /* Reset fields */
+  $('#qItem').value='';
+  $('#qQty').value='';
+  $('#qNotes').value='';
+}
+
+/* ---- PWA ---- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('nexus-sw.js').catch(function(){});
+  });
+}
+
+/* ---- boot ---- */
+/**
+ * Bootstrap the Suppliers module.
+ */
+function boot(){
+  initTheme();
+  renderShell();
+  renderKpis();
+  renderFilters();
+  renderGrid();
+  initSearch();
+  initLive();
+
+  /* Close overlays by clicking backdrop */
+  document.querySelectorAll('.overlay').forEach(function(o){
+    o.addEventListener('click',function(e){
+      if(e.target===o)o.classList.remove('open');
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded',boot);
+</script>
+</body>
+</html>

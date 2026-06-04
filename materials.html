@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ERP Nexus — Materials</title>
+<meta name="theme-color" content="#E8612C">
+<meta name="description" content="ERP Nexus — Smart Materials Catalog">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<link rel="manifest" href="nexus-manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+/* ============================================================
+   ERP NEXUS — SHARED DESIGN SYSTEM (canonical, replicated per module)
+   ============================================================ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --primary:#E8612C;--primary-d:#C44D1E;--primary-l:rgba(232,97,44,.09);
+  --blue:#2D7DD2;--blue-l:rgba(45,125,210,.1);
+  --green:#1DB06A;--amber:#E8930A;--red:#E5484D;--purple:#7C3AED;
+  --bg:#F4F5F9;--surface:#FFFFFF;--surface-2:#FAFBFE;
+  --text:#0F1117;--muted:#7B8299;--border:#E7EAF2;
+  --sh-sm:0 1px 3px rgba(15,17,23,.06);
+  --sh:0 1px 3px rgba(15,17,23,.06),0 6px 18px rgba(15,17,23,.05);
+  --sh-lg:0 20px 40px rgba(15,17,23,.16);
+  --r:12px;--r-sm:8px;--r-lg:16px;
+  --glass:rgba(255,255,255,.72);
+}
+[data-theme="dark"]{
+  --bg:#0E1016;--surface:#171A22;--surface-2:#1E222C;
+  --text:#EEF1F7;--muted:#8A92A6;--border:#272C38;
+  --primary-l:rgba(232,97,44,.16);--blue-l:rgba(45,125,210,.18);
+  --glass:rgba(23,26,34,.72);
+  --sh-sm:0 1px 3px rgba(0,0,0,.4);--sh:0 1px 3px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3);
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;font-size:14px;}
+button{font-family:inherit;cursor:pointer;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+/* ---- App shell ---- */
+.shell{display:flex;height:100vh;height:100dvh;}
+.sb{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;height:100vh;height:100dvh;transition:width .2s;}
+.sb-head{padding:18px 16px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);}
+.sb-mark{width:38px;height:38px;background:linear-gradient(135deg,var(--primary),#F4863F);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:15px;flex-shrink:0;box-shadow:0 4px 12px rgba(232,97,44,.35);}
+.sb-brand{font-size:15px;font-weight:800;letter-spacing:-.3px;}
+.sb-brand span{color:var(--primary);}
+.sb-ver{font-size:10px;color:var(--muted);font-weight:600;}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0;}
+.sb-sec{padding:14px 16px 6px;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase;}
+.nav-i{display:flex;align-items:center;gap:11px;padding:10px 14px;margin:2px 9px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;transition:background .15s,color .15s;}
+.nav-i:hover{background:var(--surface-2);color:var(--text);}
+.nav-i.active{background:var(--primary-l);color:var(--primary);font-weight:700;}
+.nav-ico{font-size:17px;width:20px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:1px 7px;border-radius:9px;}
+.sb-foot{padding:12px;border-top:1px solid var(--border);}
+.u-card{display:flex;align-items:center;gap:10px;}
+.u-av{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue),#5AA0E6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex-shrink:0;}
+.u-name{font-size:12.5px;font-weight:700;}
+.u-role{font-size:10.5px;color:var(--muted);}
+.icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--muted);transition:all .15s;}
+.icon-btn:hover{color:var(--primary);border-color:var(--primary);}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.topbar{background:var(--glass);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;gap:16px;flex-shrink:0;z-index:30;}
+.tb-title h1{font-size:17px;font-weight:800;letter-spacing:-.3px;}
+.tb-title p{font-size:11.5px;color:var(--muted);}
+.search-wrap{flex:1;max-width:480px;position:relative;}
+.search-box{width:100%;height:40px;padding:0 14px 0 40px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;}
+.search-box:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);background:var(--surface);}
+.search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none;}
+.search-kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 6px;background:var(--surface);}
+.tb-actions{display:flex;align-items:center;gap:9px;margin-left:auto;}
+.live-pill{display:flex;align-items:center;gap:6px;background:rgba(29,176,106,.1);border:1px solid rgba(29,176,106,.25);color:var(--green);padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
+.live-pill.offline{background:rgba(232,147,10,.1);border-color:rgba(232,147,10,.3);color:var(--amber);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(1.6);}}
+
+.content{flex:1;overflow-y:auto;padding:20px 22px 90px;}
+.page-grid{max-width:1440px;margin:0 auto;}
+
+/* ---- Cards / layout ---- */
+.grid-2{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-bottom:14px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh-sm);}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.card-t{font-size:13.5px;font-weight:800;letter-spacing:-.2px;}
+.card-t small{font-weight:600;color:var(--muted);font-size:11px;margin-left:6px;}
+.link-btn{font-size:11.5px;font-weight:700;color:var(--primary);background:none;border:none;}
+
+/* ---- Action center ---- */
+.action-item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:11px;margin-bottom:9px;transition:border-color .15s;}
+.action-item:hover{border-color:var(--primary);}
+.ai-ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.ai-body{flex:1;min-width:0;}
+.ai-title{font-size:13px;font-weight:700;}
+.ai-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+.ai-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn{border:none;border-radius:var(--r-sm);font-weight:700;font-size:12px;padding:8px 14px;transition:filter .15s,background .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-pri{background:var(--primary);color:#fff;}.btn-pri:hover{background:var(--primary-d);}
+.btn-ok{background:var(--green);color:#fff;}.btn-ok:hover{filter:brightness(.93);}
+.btn-no{background:rgba(229,72,77,.12);color:var(--red);}.btn-no:hover{background:rgba(229,72,77,.2);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary);}
+.btn-sm{padding:6px 11px;font-size:11px;}
+
+/* ---- badges & chips ---- */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:999px;}
+.b-green{background:rgba(29,176,106,.12);color:#0e7a4a;}
+.b-amber{background:rgba(232,147,10,.13);color:#a06003;}
+.b-red{background:rgba(229,72,77,.12);color:#c0292e;}
+.b-blue{background:var(--blue-l);color:#1a5fa0;}
+.b-grey{background:var(--surface-2);color:var(--muted);border:1px solid var(--border);}
+.b-purple{background:rgba(124,58,237,.12);color:#6d28d9;}
+.skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:shimmer 1.3s infinite;border-radius:8px;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+/* ---- Mobile bottom nav ---- */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--glass);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:50;justify-content:space-around;}
+.bn-i{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:9.5px;font-weight:700;}
+.bn-i.active{color:var(--primary);}
+.bn-i .nav-ico{font-size:19px;}
+
+/* ---- Search overlay results ---- */
+.search-results{position:absolute;top:46px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--sh-lg);padding:8px;max-height:60vh;overflow-y:auto;display:none;z-index:40;}
+.search-results.open{display:block;}
+.sr-group{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:8px 10px 4px;}
+.sr-i{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;}
+.sr-i:hover{background:var(--surface-2);}
+.sr-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.sr-name{font-size:12.5px;font-weight:600;}.sr-meta{font-size:10.5px;color:var(--muted);}
+.sr-ai{font-size:11.5px;color:var(--primary);font-weight:700;padding:8px 10px;}
+
+.toast-wrap{position:fixed;top:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;padding:12px 14px;box-shadow:var(--sh-lg);font-size:12.5px;font-weight:600;min-width:240px;animation:slideIn .3s ease;}
+@keyframes slideIn{from{transform:translateX(120%);}to{transform:translateX(0);}}
+
+/* ---- modal (from purchaserequests) ---- */
+.overlay{position:fixed;inset:0;background:rgba(8,10,16,.45);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:120;padding:18px;}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:pop .2s cubic-bezier(.16,1,.3,1);}
+@keyframes pop{from{transform:scale(.95);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal-h{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-t{font-size:15px;font-weight:800;}
+.modal-b{padding:18px;}
+.modal-f{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.fld{margin-bottom:14px;}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.fld input,.fld select,.fld textarea{width:100%;min-height:40px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font-family:inherit;font-size:13px;outline:none;}
+.fld textarea{min-height:84px;resize:vertical;}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);}
+
+/* ---- segmented control (from purchaserequests) ---- */
+.seg{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:3px;}
+.seg button{border:none;background:none;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:700;color:var(--muted);}
+.seg button.on{background:var(--primary);color:#fff;}
+
+@media(max-width:1100px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+@media(max-width:760px){
+  .sb{display:none;}
+  .bottom-nav{display:flex;}
+  .topbar{padding:10px 14px;}
+  .tb-title{display:none;}
+  .search-kbd{display:none;}
+  .content{padding:14px 14px 90px;}
+  .live-pill span{display:none;}
+}
+
+/* ============================================================
+   MODULE-SPECIFIC: Materials Catalog
+   ============================================================ */
+
+/* ---- Toolbar ---- */
+.mat-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.mat-toolbar .seg{flex-shrink:0;}
+.mat-count{font-size:12px;color:var(--muted);font-weight:600;margin-left:4px;}
+
+/* ---- Layout: filter sidebar + catalog area ---- */
+.mat-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start;}
+
+/* ---- Filter sidebar ---- */
+.filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;box-shadow:var(--sh-sm);position:sticky;top:0;}
+.filter-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.filter-title{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.filter-clear{font-size:11px;font-weight:700;color:var(--primary);background:none;border:none;}
+.filter-sec{margin-bottom:14px;}
+.filter-sec-label{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;display:block;}
+.filter-check{display:flex;align-items:center;gap:7px;padding:5px 0;cursor:pointer;font-size:12.5px;font-weight:600;}
+.filter-check input[type="checkbox"]{width:15px;height:15px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;}
+.filter-check .f-count{margin-left:auto;font-size:10.5px;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:1px 7px;}
+.price-range{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.price-range input{width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--text);font-size:12px;font-family:inherit;outline:none;}
+.price-range input:focus{border-color:var(--primary);}
+
+/* ---- Catalog grid view ---- */
+.mat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+
+/* ---- Material card ---- */
+.mat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh-sm);transition:transform .15s,box-shadow .15s;position:relative;}
+.mat-card:hover{transform:translateY(-2px);box-shadow:var(--sh);}
+.mat-card.selected{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-l);}
+.mat-card-check{position:absolute;top:12px;right:12px;}
+.mat-card-check input[type="checkbox"]{width:16px;height:16px;accent-color:var(--primary);cursor:pointer;}
+.mat-card-top{display:flex;align-items:flex-start;gap:11px;margin-bottom:12px;padding-right:28px;}
+.mat-ico{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.mat-card-info{min-width:0;flex:1;}
+.mat-card-name{font-size:13px;font-weight:700;line-height:1.35;margin-bottom:3px;}
+.mat-card-cat{font-size:11px;color:var(--muted);font-weight:600;}
+.mat-price-row{display:flex;align-items:baseline;gap:6px;margin-bottom:4px;}
+.mat-price{font-size:18px;font-weight:800;letter-spacing:-.4px;color:var(--primary);cursor:pointer;border-radius:5px;padding:1px 3px;transition:background .12s;}
+.mat-price:hover{background:var(--primary-l);}
+.mat-price-unit{font-size:11px;color:var(--muted);font-weight:600;}
+.mat-price-date{font-size:10.5px;color:var(--muted);}
+.mat-price-input{font-size:16px;font-weight:800;color:var(--primary);border:2px solid var(--primary);border-radius:6px;padding:2px 7px;background:var(--surface);font-family:inherit;width:120px;outline:none;}
+.mat-stock-row{margin-bottom:10px;}
+.mat-stock-label{display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px;}
+.mat-stock-text{font-weight:700;}
+.mat-stock-reorder{color:var(--muted);}
+.mat-progress{height:6px;border-radius:3px;background:var(--border);overflow:hidden;}
+.mat-progress-bar{height:100%;border-radius:3px;transition:width .3s;}
+.mat-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:11px;}
+.mat-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.mat-actions .btn{flex:1;min-width:0;justify-content:center;font-size:10.5px;padding:6px 8px;}
+
+/* ---- Table view ---- */
+.mat-table-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);box-shadow:var(--sh-sm);}
+.mat-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.mat-table thead tr{position:sticky;top:0;background:var(--surface-2);z-index:2;}
+.mat-table th{padding:11px 13px;text-align:left;font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.mat-table th.sortable{cursor:pointer;user-select:none;}
+.mat-table th.sortable:hover{color:var(--primary);}
+.mat-table tbody tr{border-bottom:1px solid var(--border);transition:background .12s;}
+.mat-table tbody tr:last-child{border-bottom:none;}
+.mat-table tbody tr:nth-child(even){background:var(--surface-2);}
+.mat-table tbody tr:hover{background:var(--primary-l);}
+.mat-table tbody tr.selected{background:var(--primary-l);}
+.mat-table td{padding:10px 13px;vertical-align:middle;}
+.mat-table td.td-name{font-weight:700;max-width:200px;}
+.mat-table td.td-price{font-weight:800;color:var(--primary);cursor:pointer;white-space:nowrap;}
+.mat-table td.td-price:hover{text-decoration:underline;}
+.tbl-ico{font-size:17px;}
+.tbl-check{width:36px;text-align:center;}
+.tbl-check input[type="checkbox"]{width:15px;height:15px;accent-color:var(--primary);cursor:pointer;}
+.tbl-progress{width:80px;height:6px;border-radius:3px;background:var(--border);overflow:hidden;display:inline-block;vertical-align:middle;}
+.tbl-progress-bar{height:100%;border-radius:3px;}
+.tbl-actions{display:flex;gap:5px;flex-wrap:nowrap;}
+
+/* ---- Bulk action bar ---- */
+.bulk-bar{position:sticky;bottom:8px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh-lg);padding:12px 18px;display:none;align-items:center;gap:12px;z-index:20;margin-top:12px;}
+.bulk-bar.open{display:flex;}
+.bulk-count{font-size:13px;font-weight:800;color:var(--primary);flex:1;}
+.bulk-dismiss{font-size:13px;color:var(--muted);background:none;border:none;font-weight:700;}
+
+/* ---- Empty state ---- */
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted);}
+.empty-state .es-ico{font-size:40px;margin-bottom:12px;}
+.empty-state p{font-size:13px;font-weight:600;}
+
+/* ---- History modal list ---- */
+.hist-list{display:flex;flex-direction:column;gap:0;}
+.hist-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border);}
+.hist-row:last-child{border-bottom:none;}
+.hist-date{font-size:12px;color:var(--muted);font-weight:600;min-width:90px;}
+.hist-price{font-size:14px;font-weight:800;color:var(--primary);}
+.hist-supplier{font-size:11px;color:var(--muted);max-width:160px;text-align:right;}
+.hist-delta{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;}
+.hist-delta.up{background:rgba(229,72,77,.12);color:var(--red);}
+.hist-delta.dn{background:rgba(29,176,106,.12);color:#0e7a4a;}
+.hist-delta.flat{background:var(--surface-2);color:var(--muted);border:1px solid var(--border);}
+
+/* ---- filter panel toggle on mobile ---- */
+.filter-toggle-btn{display:none;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--muted);gap:6px;align-items:center;}
+.filter-toggle-btn:hover{color:var(--primary);border-color:var(--primary);}
+
+@media(max-width:900px){
+  .mat-layout{grid-template-columns:1fr;}
+  .filter-panel{display:none;}
+  .filter-panel.mobile-open{display:block;}
+  .filter-toggle-btn{display:inline-flex;}
+  .mat-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));}
+}
+@media(max-width:600px){
+  .mat-grid{grid-template-columns:1fr;}
+  .mat-toolbar{gap:7px;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- ================= SIDEBAR (shared shell) ================= -->
+  <aside class="sb" id="sidebar" aria-label="Site navigation"></aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="tb-title">
+        <h1>Materials</h1>
+        <p>Smart catalog &middot; 2,068 items</p>
+      </div>
+      <div class="search-wrap">
+        <span class="search-ico" aria-hidden="true">🔍</span>
+        <input class="search-box" id="globalSearch" placeholder="Search materials, suppliers, offers, requests…" aria-label="Global search" autocomplete="off">
+        <span class="search-kbd">Ctrl K</span>
+        <div class="search-results" id="searchResults" role="listbox"></div>
+      </div>
+      <div class="tb-actions">
+        <div class="live-pill" id="livePill"><span class="live-dot"></span><span>Live</span></div>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">🌙</button>
+      </div>
+    </header>
+
+    <div class="content" id="mainContent">
+      <div class="page-grid">
+
+        <!-- Toolbar -->
+        <div class="mat-toolbar" role="toolbar" aria-label="Catalog controls">
+          <div class="seg" role="tablist" aria-label="View mode">
+            <button id="vCard" class="on" onclick="setView('card')" role="tab" aria-selected="true">⊞ Card View</button>
+            <button id="vTable" onclick="setView('table')" role="tab" aria-selected="false">☰ Table View</button>
+          </div>
+          <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleFilterPanel()" aria-expanded="false" aria-controls="filterPanel">
+            <span>⚙</span> Filters
+          </button>
+          <span class="mat-count" id="matCount" aria-live="polite"></span>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV()" aria-label="Export CSV">⬇ Export</button>
+          <button class="btn btn-pri btn-sm" style="margin-left:auto" onclick="openAddModal()" aria-label="Add material">＋ Add Material</button>
+        </div>
+
+        <!-- Main layout: filter + catalog -->
+        <div class="mat-layout">
+
+          <!-- Filter sidebar -->
+          <aside class="filter-panel" id="filterPanel" aria-label="Filter materials">
+            <div class="filter-head">
+              <span class="filter-title">Filters</span>
+              <button class="filter-clear" onclick="clearFilters()" aria-label="Clear all filters">Clear all</button>
+            </div>
+
+            <div class="filter-sec">
+              <span class="filter-sec-label">Category</span>
+              <div id="catFilters"></div>
+            </div>
+
+            <div class="filter-sec">
+              <span class="filter-sec-label">Unit</span>
+              <div id="unitFilters"></div>
+            </div>
+
+            <div class="filter-sec">
+              <span class="filter-sec-label">Stock Level</span>
+              <label class="filter-check">
+                <input type="checkbox" id="fCritical" onchange="applyFilters()">
+                <span>Critical</span>
+                <span class="badge b-red f-count" id="fCriticalCount">0</span>
+              </label>
+              <label class="filter-check">
+                <input type="checkbox" id="fLow" onchange="applyFilters()">
+                <span>Low</span>
+                <span class="badge b-amber f-count" id="fLowCount">0</span>
+              </label>
+              <label class="filter-check">
+                <input type="checkbox" id="fOk" onchange="applyFilters()">
+                <span>OK</span>
+                <span class="badge b-green f-count" id="fOkCount">0</span>
+              </label>
+            </div>
+
+            <div class="filter-sec">
+              <span class="filter-sec-label">Price Range (OMR)</span>
+              <div class="price-range">
+                <input type="number" id="priceMin" placeholder="Min" min="0" step="any" oninput="applyFilters()" aria-label="Minimum price">
+                <input type="number" id="priceMax" placeholder="Max" min="0" step="any" oninput="applyFilters()" aria-label="Maximum price">
+              </div>
+            </div>
+          </aside>
+
+          <!-- Catalog area -->
+          <div>
+            <!-- Card grid -->
+            <div class="mat-grid" id="matGrid" role="list" aria-label="Materials catalog"></div>
+
+            <!-- Table view -->
+            <div id="matTableWrap" style="display:none">
+              <div class="mat-table-wrap">
+                <table class="mat-table" aria-label="Materials table">
+                  <thead>
+                    <tr>
+                      <th class="tbl-check"><input type="checkbox" id="selectAll" aria-label="Select all" onchange="toggleSelectAll(this.checked)"></th>
+                      <th></th>
+                      <th class="sortable" onclick="sortBy('name')">Name <span id="sortName"></span></th>
+                      <th class="sortable" onclick="sortBy('cat')">Category <span id="sortCat"></span></th>
+                      <th>Unit</th>
+                      <th class="sortable" onclick="sortBy('price')">Last Price <span id="sortPrice"></span></th>
+                      <th>Stock</th>
+                      <th>Status</th>
+                      <th>Supplier</th>
+                      <th>Tags</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="matTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Empty state -->
+            <div class="empty-state" id="emptyState" style="display:none" aria-live="polite">
+              <div class="es-ico">📦</div>
+              <p>No materials match your filters.<br>Try adjusting the filters or search.</p>
+            </div>
+
+            <!-- Bulk action bar -->
+            <div class="bulk-bar" id="bulkBar" aria-live="polite" aria-label="Bulk actions">
+              <span class="bulk-count" id="bulkCount">0 selected</span>
+              <button class="btn btn-pri btn-sm" onclick="bulkCreatePR()" aria-label="Create purchase request for selected materials">📋 Create Purchase Request</button>
+              <button class="btn btn-ghost btn-sm" onclick="bulkRequestQuote()" aria-label="Request quotes for selected materials">💬 Request Quote</button>
+              <button class="bulk-dismiss" onclick="clearSelection()" aria-label="Clear selection">✕ Clear</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<nav class="bottom-nav" id="bottomNav" aria-label="Primary navigation"></nav>
+<div class="toast-wrap" id="toastWrap" aria-live="assertive"></div>
+
+<!-- ===== History Modal ===== -->
+<div class="overlay" id="historyModal" role="dialog" aria-modal="true" aria-labelledby="histModalTitle">
+  <div class="modal">
+    <div class="modal-h">
+      <div class="modal-t" id="histModalTitle">Price History</div>
+      <button class="icon-btn" onclick="closeModal('historyModal')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-b">
+      <div id="histMaterialName" style="font-size:12.5px;color:var(--muted);margin-bottom:14px;font-weight:600;"></div>
+      <div class="hist-list" id="histList"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('historyModal')">Close</button>
+      <button class="btn btn-pri btn-sm" onclick="requestQuoteFromHistory()" id="histRQBtn">Request Quote</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Add Material Modal ===== -->
+<div class="overlay" id="addModal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
+  <div class="modal">
+    <div class="modal-h">
+      <div class="modal-t" id="addModalTitle">Add Material</div>
+      <button class="icon-btn" onclick="closeModal('addModal')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="fld"><label>Material Name</label><input id="addName" placeholder="e.g. Bitumen 80/100 Penetration Grade"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="fld"><label>Category</label>
+          <select id="addCat">
+            <option>Bitumen</option><option>Fuel</option><option>Stone</option>
+            <option>Equipment</option><option>Steel</option><option>Cement</option>
+            <option>Chemical</option><option>Pipe</option>
+          </select>
+        </div>
+        <div class="fld"><label>Unit</label>
+          <select id="addUnit"><option>ton</option><option>liter</option><option>bag</option><option>month</option><option>m3</option><option>pcs</option></select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="fld"><label>Last Price (OMR)</label><input id="addPrice" type="number" inputmode="decimal" placeholder="0.000" step="any"></div>
+        <div class="fld"><label>Current Stock</label><input id="addStock" type="number" inputmode="numeric" placeholder="0"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="fld"><label>Reorder Level</label><input id="addReorder" type="number" inputmode="numeric" placeholder="0"></div>
+        <div class="fld"><label>Tag</label>
+          <select id="addTag"><option value="">None</option><option>Fast Moving</option><option>Critical</option><option>Seasonal</option><option>New</option></select>
+        </div>
+      </div>
+      <div class="fld"><label>Last Supplier</label><input id="addSupplier" placeholder="Supplier name"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('addModal')">Cancel</button>
+      <button class="btn btn-pri" onclick="submitAddMaterial()">Add to Catalog</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---- Firebase (shared project) ---- */
+var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
+var db=null;
+try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){console.warn('firebase init',e);}
+
+/* ---- Navigation model (shared across all modules) ---- */
+var NAV=[
+  {sec:'Overview'},
+  {id:'dashboard',label:'Command Center',ico:'◈',href:'dashboard.html'},
+  {id:'analytics',label:'Analytics',ico:'📊',href:'analytics.html'},
+  {sec:'Procurement'},
+  {id:'materials',label:'Materials',ico:'📦',href:'materials.html'},
+  {id:'suppliers',label:'Suppliers',ico:'🏭',href:'suppliers.html'},
+  {id:'offers',label:'Offers',ico:'🏷️',href:'offers.html'},
+  {id:'purchaserequests',label:'Purchase Requests',ico:'📋',href:'purchaserequests.html',badge:'pr'},
+  {sec:'Workspace'},
+  {id:'notifications',label:'Notifications',ico:'🔔',href:'notifications.html',badge:'notif'},
+  {id:'settings',label:'Settings',ico:'⚙️',href:'settings.html'}
+];
+var BOTTOM=['dashboard','materials','purchaserequests','suppliers','notifications'];
+var CURRENT='materials';
+
+/* ---- Realistic Omani construction seed data ---- */
+var SEED={
+  meta:{project:'Hadbin Road & Infrastructure',currency:'OMR'},
+  user:{name:'Salim Al-Harthy',role:'Procurement Officer',initials:'SH'},
+  materials:[
+    {id:'M-1001',name:'Bitumen 60/70 Penetration Grade',cat:'Bitumen',unit:'ton',price:285.0,date:'2026-05-22',stock:42,reorder:60,supplier:'BRIGHT LIGHT TRADING',tag:'Critical'},
+    {id:'M-1002',name:'Diesel Fuel (Gas Oil)',cat:'Fuel',unit:'liter',price:0.196,date:'2026-05-30',stock:18500,reorder:20000,supplier:'AL MAHA PETROLEUM',tag:'Fast Moving'},
+    {id:'M-1003',name:'Aggregate Stone 20mm',cat:'Stone',unit:'ton',price:4.2,date:'2026-05-18',stock:980,reorder:500,supplier:'JABAL QUARRIES LLC',tag:'Fast Moving'},
+    {id:'M-1004',name:'Crawler Crane 150T (Rental/Month)',cat:'Equipment',unit:'month',price:9800.0,date:'2026-04-11',stock:1,reorder:1,supplier:'OMAN HEAVY LIFT',tag:'Seasonal'},
+    {id:'M-1005',name:'Reinforcement Steel Bar 16mm',cat:'Steel',unit:'ton',price:312.5,date:'2026-05-27',stock:28,reorder:40,supplier:'MUSCAT STEEL',tag:'Critical'},
+    {id:'M-1006',name:'Portland Cement OPC 42.5N',cat:'Cement',unit:'bag',price:1.65,date:'2026-05-29',stock:3400,reorder:2000,supplier:'OMAN CEMENT CO',tag:'Fast Moving'},
+    {id:'M-1007',name:'Sub-base Material 0-40mm',cat:'Stone',unit:'ton',price:3.1,date:'2026-05-15',stock:1420,reorder:800,supplier:'JABAL QUARRIES LLC',tag:''},
+    {id:'M-1008',name:'MC-30 Prime Coat Emulsion',cat:'Bitumen',unit:'liter',price:0.42,date:'2026-05-20',stock:6200,reorder:5000,supplier:'BRIGHT LIGHT TRADING',tag:'New'},
+    {id:'M-1009',name:'Reinforcement Steel Bar 12mm',cat:'Steel',unit:'ton',price:298.0,date:'2026-05-25',stock:55,reorder:40,supplier:'MUSCAT STEEL',tag:'Fast Moving'},
+    {id:'M-1010',name:'Rapid-Setting Concrete Mix C25',cat:'Cement',unit:'bag',price:2.15,date:'2026-05-28',stock:1100,reorder:600,supplier:'OMAN CEMENT CO',tag:''},
+    {id:'M-1011',name:'Petrol (Super Unleaded)',cat:'Fuel',unit:'liter',price:0.215,date:'2026-06-01',stock:4200,reorder:5000,supplier:'AL MAHA PETROLEUM',tag:'Critical'},
+    {id:'M-1012',name:'Granite Aggregate 10mm',cat:'Stone',unit:'ton',price:6.8,date:'2026-05-10',stock:340,reorder:200,supplier:'JABAL QUARRIES LLC',tag:'Seasonal'},
+    {id:'M-1013',name:'Bitumen 80/100 Modified',cat:'Bitumen',unit:'ton',price:310.0,date:'2026-05-08',stock:18,reorder:30,supplier:'BRIGHT LIGHT TRADING',tag:'Critical'},
+    {id:'M-1014',name:'Tower Crane MD 365 (Rental/Month)',cat:'Equipment',unit:'month',price:14500.0,date:'2026-03-15',stock:1,reorder:1,supplier:'OMAN HEAVY LIFT',tag:'Seasonal'},
+    {id:'M-1015',name:'Structural Steel H-Beam 200x200',cat:'Steel',unit:'ton',price:445.0,date:'2026-05-20',stock:12,reorder:10,supplier:'MUSCAT STEEL',tag:'New'},
+    {id:'M-1016',name:'White Portland Cement 52.5R',cat:'Cement',unit:'bag',price:3.2,date:'2026-05-26',stock:620,reorder:400,supplier:'OMAN CEMENT CO',tag:''}
+  ],
+  suppliers:[
+    {id:'S-01',name:'BRIGHT LIGHT TRADING',bin:'1029384',loc:'Muscat',score:'A',phone:'+96899112233',email:'sales@brightlight.om',orders:48,onTime:96,priceVsMkt:-4},
+    {id:'S-02',name:'AL MAHA PETROLEUM',bin:'1182736',loc:'Muscat',score:'A',phone:'+96892334455',email:'b2b@almaha.om',orders:120,onTime:99,priceVsMkt:0},
+    {id:'S-03',name:'JABAL QUARRIES LLC',bin:'1044556',loc:'Jabal Akhdar',score:'B',phone:'+96895667788',email:'info@jabalq.om',orders:31,onTime:88,priceVsMkt:6},
+    {id:'S-04',name:'OMAN HEAVY LIFT',bin:'1156677',loc:'Sur',score:'B',phone:'+96894778899',email:'rentals@ohl.om',orders:14,onTime:79,priceVsMkt:9},
+    {id:'S-05',name:'AL ASM NEW',bin:'',loc:'Muscat',score:'D',phone:'+96891000111',email:'',orders:0,onTime:0,priceVsMkt:0,risk:'No trade license verified — approval blocked'}
+  ],
+  offers:[
+    {id:'O-301',supplier:'BRIGHT LIGHT TRADING',item:'Bitumen 60/70 — 100 ton',price:28200,unit:282,valid:'2026-06-05',status:'Active',insight:'-1% vs market'},
+    {id:'O-302',supplier:'OMAN HEAVY LIFT',item:'Crawler Crane 150T — 1 month',price:10900,unit:10900,valid:'2026-06-04',status:'Active',insight:'+12% higher than market average'},
+    {id:'O-303',supplier:'JABAL QUARRIES LLC',item:'Aggregate 20mm — 500 ton',price:2050,unit:4.1,valid:'2026-06-12',status:'Active',insight:'-2% vs market'},
+    {id:'O-304',supplier:'MUSCAT STEEL',item:'Rebar 16mm — 30 ton',price:9150,unit:305,valid:'2026-05-29',status:'Expired',insight:'on market'}
+  ],
+  prs:[
+    {id:'PR-1190',desc:'Bitumen 60/70 — 100 ton for Hadbin Section B',amount:28200,requester:'Eng. Khalid',stage:'Level 3',age:1,created:'2026-06-02'},
+    {id:'PR-1191',desc:'Crawler Crane 150T rental — 1 month',amount:10900,requester:'Eng. Khalid',stage:'Level 2',age:0,created:'2026-06-03'},
+    {id:'PR-1189',desc:'Diesel Fuel top-up — 20,000 L',amount:3920,requester:'Warehouse',stage:'Submitted',age:2,created:'2026-06-01'},
+    {id:'PR-1188',desc:'Aggregate 20mm — 500 ton',amount:2050,requester:'Eng. Noor',stage:'Approved',age:4,created:'2026-05-30'},
+    {id:'PR-1187',desc:'Rebar 16mm — 40 ton',amount:12500,requester:'Eng. Noor',stage:'Rejected',age:5,created:'2026-05-29'}
+  ],
+  activity:[
+    {ico:'✅',color:'green',html:'Purchase Request <b>#1188</b> approved by Finance',time:'Today · 11:30 AM'},
+    {ico:'🏷️',color:'blue',html:'New offer from <b>BRIGHT LIGHT</b> — Bitumen 100 ton',time:'Today · 09:14 AM'},
+    {ico:'📋',color:'amber',html:'<b>Eng. Khalid</b> submitted Purchase Request <b>#1191</b>',time:'Today · 08:02 AM'},
+    {ico:'⚠️',color:'red',html:'Stock alert: <b>Reinforcement Steel 16mm</b> below reorder point',time:'Yesterday · 04:40 PM'},
+    {ico:'🏭',color:'blue',html:'Supplier <b>AL ASM NEW</b> flagged — license verification required',time:'Yesterday · 02:10 PM'}
+  ]
+};
+
+/* ---- Helpers ---- */
+/** Simple query selector shorthand */
+function $(s,r){return (r||document).querySelector(s);}
+/** Create a DOM element with optional class and text content */
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+/** Format a number as OMR currency string */
+function fmtOMR(n){return Number(n).toLocaleString('en-OM',{minimumFractionDigits:0,maximumFractionDigits:3});}
+/** Show a toast notification that auto-dismisses after 3.5 s */
+function toast(msg){
+  var w=$('#toastWrap');
+  var t=el('div','toast');
+  t.textContent=msg;
+  w.appendChild(t);
+  setTimeout(function(){
+    t.style.opacity='0';
+    t.style.transition='opacity .3s';
+    setTimeout(function(){t.remove();},300);
+  },3500);
+}
+/** Count pending purchase requests */
+function pendingPRs(){return SEED.prs.filter(function(p){return /Level|Submitted/.test(p.stage);}).length;}
+
+/* ---- Theme ---- */
+/** Apply light or dark theme to the document root */
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');
+  var b=$('#themeBtn');
+  if(b){b.textContent=t==='dark'?'☀️':'🌙';}
+  localStorage.setItem('nexus-theme',t);
+}
+/** Initialise theme from localStorage or OS preference */
+function initTheme(){
+  var saved=localStorage.getItem('nexus-theme');
+  if(!saved){
+    saved=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+  }
+  applyTheme(saved);
+  var b=$('#themeBtn');
+  if(b){
+    b.onclick=function(){
+      var cur=document.documentElement.getAttribute('data-theme');
+      applyTheme(cur==='dark'?'light':'dark');
+    };
+  }
+}
+
+/* ---- Shell rendering (sidebar + bottom nav) ---- */
+/** Render the sidebar navigation and bottom mobile nav */
+function renderShell(){
+  var sb=$('#sidebar');
+  var head='<div class="sb-head"><div class="sb-mark">NX</div><div><div class="sb-brand">ERP <span>Nexus</span></div><div class="sb-ver">Procurement · v2.0</div></div></div><nav class="sb-nav">';
+  var body='';
+  NAV.forEach(function(n){
+    if(n.sec){body+='<div class="sb-sec">'+n.sec+'</div>';return;}
+    var badge='';
+    if(n.badge==='pr'&&pendingPRs()){badge='<span class="nav-badge">'+pendingPRs()+'</span>';}
+    if(n.badge==='notif'){badge='<span class="nav-badge">5</span>';}
+    body+='<a class="nav-i'+(n.id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label+badge+'</a>';
+  });
+  var foot='</nav><div class="sb-foot"><div class="u-card"><div class="u-av">'+SEED.user.initials+'</div><div style="flex:1;min-width:0"><div class="u-name">'+SEED.user.name+'</div><div class="u-role">'+SEED.user.role+'</div></div><button class="icon-btn" onclick="signOut()" aria-label="Sign out" title="Sign out">⏻</button></div></div>';
+  sb.innerHTML=head+body+foot;
+  var bn=$('#bottomNav');
+  if(bn){
+    var h='';
+    BOTTOM.forEach(function(id){
+      var n=NAV.find(function(x){return x.id===id;});
+      if(!n){return;}
+      h+='<a class="bn-i'+(id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label.split(' ')[0]+'</a>';
+    });
+    bn.innerHTML=h;
+  }
+}
+/** Handle sign out action */
+function signOut(){toast('Signed out (demo session)');}
+
+/* ---- Live connection indicator ---- */
+/** Watch browser online/offline events and update the live pill */
+function initLive(){
+  function set(on){
+    var p=$('#livePill');
+    if(!p){return;}
+    if(on){
+      p.classList.remove('offline');
+      p.innerHTML='<span class="live-dot"></span><span>Live</span>';
+    }else{
+      p.classList.add('offline');
+      p.innerHTML='<span class="live-dot"></span><span>Offline</span>';
+    }
+  }
+  window.addEventListener('online',function(){set(true);toast('Reconnected — syncing');});
+  window.addEventListener('offline',function(){set(false);});
+  set(navigator.onLine);
+  if(db){
+    try{db.collection('nexus_meta').doc('heartbeat').onSnapshot(function(){},function(){});}catch(e){}
+  }
+}
+
+/* ---- Global search ---- */
+/** Build a flat search index from all SEED collections */
+function buildSearchIndex(){
+  var ix=[];
+  SEED.materials.forEach(function(m){
+    ix.push({grp:'Materials',ico:'📦',cls:'b-blue',name:m.name,meta:m.cat+' · '+fmtOMR(m.price)+' OMR/'+m.unit,href:'materials.html'});
+  });
+  SEED.suppliers.forEach(function(s){
+    ix.push({grp:'Suppliers',ico:'🏭',cls:'b-green',name:s.name,meta:s.loc+' · Score '+s.score,href:'suppliers.html'});
+  });
+  SEED.offers.forEach(function(o){
+    ix.push({grp:'Offers',ico:'🏷️',cls:'b-amber',name:o.item,meta:o.supplier+' · '+fmtOMR(o.price)+' OMR',href:'offers.html'});
+  });
+  SEED.prs.forEach(function(p){
+    ix.push({grp:'Purchase Requests',ico:'📋',cls:'b-grey',name:p.id+' — '+p.desc,meta:p.stage+' · '+fmtOMR(p.amount)+' OMR',href:'purchaserequests.html'});
+  });
+  return ix;
+}
+/** Initialise the global search box with live results dropdown */
+function initSearch(){
+  var box=$('#globalSearch');
+  var res=$('#searchResults');
+  var ix=buildSearchIndex();
+  function run(q){
+    q=q.trim().toLowerCase();
+    if(!q){res.classList.remove('open');return;}
+    var hits=ix.filter(function(i){return (i.name+' '+i.meta).toLowerCase().indexOf(q)>-1;}).slice(0,12);
+    var groups={};
+    hits.forEach(function(h){
+      if(!groups[h.grp]){groups[h.grp]=[];}
+      groups[h.grp].push(h);
+    });
+    var html='';
+    if(q.indexOf('crane')>-1||q.indexOf('150')>-1){
+      html+='<div class="sr-ai">💡 Did you mean: Crawler Crane 150T?</div>';
+    }
+    if(!hits.length){
+      html+='<div class="sr-ai">No matches for "'+q.replace(/[<>"&]/g,'')+'</div>';
+    }
+    Object.keys(groups).forEach(function(g){
+      html+='<div class="sr-group">'+g+'</div>';
+      groups[g].forEach(function(h){
+        html+='<a class="sr-i" href="'+h.href+'"><span class="sr-ico badge '+h.cls+'">'+h.ico+'</span><div><div class="sr-name">'+h.name+'</div><div class="sr-meta">'+h.meta+'</div></div></a>';
+      });
+    });
+    res.innerHTML=html;
+    res.classList.add('open');
+  }
+  box.addEventListener('input',function(){run(box.value);});
+  box.addEventListener('focus',function(){if(box.value){run(box.value);}});
+  document.addEventListener('click',function(e){
+    if(!e.target.closest('.search-wrap')){res.classList.remove('open');}
+  });
+  document.addEventListener('keydown',function(e){
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();box.focus();}
+    if(e.key==='/'&&document.activeElement!==box&&!/input|textarea/i.test(document.activeElement.tagName)){e.preventDefault();box.focus();}
+    if(e.key==='Escape'){res.classList.remove('open');}
+  });
+}
+
+/* ============================================================
+   MODULE STATE
+   ============================================================ */
+var currentView='card';
+var selectedIds=new Set();
+var activeHistMaterialId=null;
+var sortField='name';
+var sortDir=1;
+var filterState={
+  cats:{},
+  units:{},
+  stock:{critical:false,low:false,ok:false},
+  priceMin:'',
+  priceMax:''
+};
+
+/* ---- Category icons ---- */
+var CAT_ICONS={
+  'Bitumen':'🛢️',
+  'Fuel':'⛽',
+  'Stone':'🪨',
+  'Equipment':'🏗️',
+  'Steel':'🔩',
+  'Cement':'🏚️',
+  'Chemical':'🧪',
+  'Pipe':'🔧'
+};
+
+/* ---- Tag badge class ---- */
+/** Return a CSS badge class for a given tag string */
+function tagClass(tag){
+  if(tag==='Critical'){return 'b-red';}
+  if(tag==='Fast Moving'){return 'b-green';}
+  if(tag==='Seasonal'){return 'b-amber';}
+  if(tag==='New'){return 'b-blue';}
+  return 'b-grey';
+}
+
+/* ---- Stock level helpers ---- */
+/** Calculate the stock ratio (stock / reorder) clamped to [0,2] */
+function stockRatio(m){
+  if(m.reorder===0){return 1;}
+  return m.stock/m.reorder;
+}
+/** Return colour for a stock progress bar */
+function stockColor(m){
+  var r=stockRatio(m);
+  if(r<1){return 'var(--red)';}
+  if(r<1.5){return 'var(--amber)';}
+  return 'var(--green)';
+}
+/** Return the stock level category string: 'critical', 'low', or 'ok' */
+function stockLevel(m){
+  var r=stockRatio(m);
+  if(r<1){return 'critical';}
+  if(r<1.5){return 'low';}
+  return 'ok';
+}
+/** Return percentage width for the progress bar, capped at 100% */
+function stockPct(m){
+  var pct=Math.min(100,(m.stock/m.reorder)*100);
+  return pct.toFixed(1);
+}
+
+/* ---- Fake price history generator ---- */
+/** Build a plausible 6-entry price history array for the given material */
+function buildHistory(m){
+  var hist=[];
+  var suppliers=[m.supplier,'MUSCAT SUPPLY LLC','AL NAHDA TRADING','GULF PROCUREMENT CO'];
+  var base=m.price;
+  var months=['2025-12','2026-01','2026-02','2026-03','2026-04','2026-05'];
+  for(var i=0;i<6;i++){
+    var variation=(Math.random()-0.5)*0.1;
+    var p=base*(1+variation*(6-i)*0.04);
+    var supplier=suppliers[i%suppliers.length];
+    hist.push({date:months[i],price:parseFloat(p.toFixed(3)),supplier:supplier});
+  }
+  hist.push({date:'2026-06',price:m.price,supplier:m.supplier,current:true});
+  return hist;
+}
+
+/* ---- Filter panel setup ---- */
+/** Build checkbox lists for Category and Unit filters */
+function buildFilterPanel(){
+  var cats={};
+  var units={};
+  SEED.materials.forEach(function(m){
+    if(!cats[m.cat]){cats[m.cat]=0;}
+    cats[m.cat]++;
+    if(!units[m.unit]){units[m.unit]=0;}
+    units[m.unit]++;
+  });
+  var cEl=$('#catFilters');
+  cEl.innerHTML='';
+  Object.keys(cats).sort().forEach(function(c){
+    var lbl=document.createElement('label');
+    lbl.className='filter-check';
+    var chk=document.createElement('input');
+    chk.type='checkbox';
+    chk.dataset.cat=c;
+    chk.addEventListener('change',function(){
+      filterState.cats[c]=chk.checked;
+      applyFilters();
+    });
+    var span=document.createElement('span');
+    span.textContent=c;
+    var cnt=document.createElement('span');
+    cnt.className='f-count';
+    cnt.textContent=cats[c];
+    lbl.appendChild(chk);lbl.appendChild(span);lbl.appendChild(cnt);
+    cEl.appendChild(lbl);
+    filterState.cats[c]=false;
+  });
+  var uEl=$('#unitFilters');
+  uEl.innerHTML='';
+  Object.keys(units).sort().forEach(function(u){
+    var lbl=document.createElement('label');
+    lbl.className='filter-check';
+    var chk=document.createElement('input');
+    chk.type='checkbox';
+    chk.dataset.unit=u;
+    chk.addEventListener('change',function(){
+      filterState.units[u]=chk.checked;
+      applyFilters();
+    });
+    var span=document.createElement('span');
+    span.textContent=u;
+    var cnt=document.createElement('span');
+    cnt.className='f-count';
+    cnt.textContent=units[u];
+    lbl.appendChild(chk);lbl.appendChild(span);lbl.appendChild(cnt);
+    uEl.appendChild(lbl);
+    filterState.units[u]=false;
+  });
+  var critical=SEED.materials.filter(function(m){return stockLevel(m)==='critical';}).length;
+  var low=SEED.materials.filter(function(m){return stockLevel(m)==='low';}).length;
+  var ok=SEED.materials.filter(function(m){return stockLevel(m)==='ok';}).length;
+  $('#fCriticalCount').textContent=critical;
+  $('#fLowCount').textContent=low;
+  $('#fOkCount').textContent=ok;
+  $('#fCritical').addEventListener('change',function(){filterState.stock.critical=$('#fCritical').checked;applyFilters();});
+  $('#fLow').addEventListener('change',function(){filterState.stock.low=$('#fLow').checked;applyFilters();});
+  $('#fOk').addEventListener('change',function(){filterState.stock.ok=$('#fOk').checked;applyFilters();});
+}
+
+/* ---- Apply active filters to SEED.materials ---- */
+/** Return filtered and sorted array of materials based on current filterState */
+function getFilteredMaterials(){
+  var anyCat=Object.values(filterState.cats).some(function(v){return v;});
+  var anyUnit=Object.values(filterState.units).some(function(v){return v;});
+  var anyStock=filterState.stock.critical||filterState.stock.low||filterState.stock.ok;
+  var pMin=filterState.priceMin===''?null:parseFloat(filterState.priceMin);
+  var pMax=filterState.priceMax===''?null:parseFloat(filterState.priceMax);
+  var result=SEED.materials.filter(function(m){
+    if(anyCat&&!filterState.cats[m.cat]){return false;}
+    if(anyUnit&&!filterState.units[m.unit]){return false;}
+    if(anyStock){
+      var sl=stockLevel(m);
+      var pass=false;
+      if(filterState.stock.critical&&sl==='critical'){pass=true;}
+      if(filterState.stock.low&&sl==='low'){pass=true;}
+      if(filterState.stock.ok&&sl==='ok'){pass=true;}
+      if(!pass){return false;}
+    }
+    if(pMin!==null&&m.price<pMin){return false;}
+    if(pMax!==null&&m.price>pMax){return false;}
+    return true;
+  });
+  result=result.slice().sort(function(a,b){
+    var av=a[sortField];
+    var bv=b[sortField];
+    if(typeof av==='string'){av=av.toLowerCase();bv=bv.toLowerCase();}
+    if(av<bv){return -sortDir;}
+    if(av>bv){return sortDir;}
+    return 0;
+  });
+  return result;
+}
+
+/* ---- Apply filters and re-render ---- */
+/** Trigger filter re-apply and re-render both views */
+function applyFilters(){
+  filterState.priceMin=$('#priceMin').value;
+  filterState.priceMax=$('#priceMax').value;
+  renderCatalog();
+}
+
+/** Clear all filter checkboxes and reset filterState */
+function clearFilters(){
+  Object.keys(filterState.cats).forEach(function(k){filterState.cats[k]=false;});
+  Object.keys(filterState.units).forEach(function(k){filterState.units[k]=false;});
+  filterState.stock={critical:false,low:false,ok:false};
+  filterState.priceMin='';
+  filterState.priceMax='';
+  document.querySelectorAll('#filterPanel input[type=checkbox]').forEach(function(c){c.checked=false;});
+  $('#priceMin').value='';
+  $('#priceMax').value='';
+  renderCatalog();
+}
+
+/* ---- View toggle ---- */
+/** Switch between 'card' and 'table' views */
+function setView(v){
+  currentView=v;
+  $('#vCard').classList.toggle('on',v==='card');
+  $('#vCard').setAttribute('aria-selected',v==='card'?'true':'false');
+  $('#vTable').classList.toggle('on',v==='table');
+  $('#vTable').setAttribute('aria-selected',v==='table'?'true':'false');
+  $('#matGrid').style.display=v==='card'?'grid':'none';
+  $('#matTableWrap').style.display=v==='table'?'block':'none';
+  renderCatalog();
+}
+
+/* ---- Sort ---- */
+/** Toggle sort field and direction then re-render */
+function sortBy(field){
+  if(sortField===field){
+    sortDir*=-1;
+  }else{
+    sortField=field;
+    sortDir=1;
+  }
+  renderCatalog();
+}
+
+/* ---- Render count label ---- */
+/** Update the item count display in the toolbar */
+function updateCount(n,total){
+  var el=$('#matCount');
+  if(n===total){
+    el.textContent='Showing all '+total+' items';
+  }else{
+    el.textContent='Showing '+n+' of '+total+' items';
+  }
+}
+
+/* ---- Render catalog ---- */
+/** Render either the card grid or table depending on currentView */
+function renderCatalog(){
+  var items=getFilteredMaterials();
+  updateCount(items.length,SEED.materials.length);
+  var empty=$('#emptyState');
+  if(items.length===0){
+    empty.style.display='block';
+    $('#matGrid').innerHTML='';
+    $('#matTableBody').innerHTML='';
+    return;
+  }
+  empty.style.display='none';
+  if(currentView==='card'){
+    renderCardView(items);
+  }else{
+    renderTableView(items);
+  }
+}
+
+/* ---- Card view rendering ---- */
+/** Render materials as interactive cards in the grid */
+function renderCardView(items){
+  var grid=$('#matGrid');
+  grid.innerHTML='';
+  items.forEach(function(m){
+    var card=buildMaterialCard(m);
+    grid.appendChild(card);
+  });
+}
+
+/** Build a single material card DOM element */
+function buildMaterialCard(m){
+  var sl=stockLevel(m);
+  var pct=stockPct(m);
+  var color=stockColor(m);
+  var ico=CAT_ICONS[m.cat]||'📦';
+  var selected=selectedIds.has(m.id);
+
+  var card=document.createElement('div');
+  card.className='mat-card'+(selected?' selected':'');
+  card.setAttribute('role','listitem');
+  card.setAttribute('aria-label',m.name);
+  card.dataset.id=m.id;
+
+  /* checkbox */
+  var chkWrap=document.createElement('div');
+  chkWrap.className='mat-card-check';
+  var chk=document.createElement('input');
+  chk.type='checkbox';
+  chk.checked=selected;
+  chk.setAttribute('aria-label','Select '+m.name);
+  chk.addEventListener('change',function(){
+    toggleSelect(m.id,chk.checked);
+    card.classList.toggle('selected',chk.checked);
+  });
+  chkWrap.appendChild(chk);
+  card.appendChild(chkWrap);
+
+  /* top: icon + name + cat */
+  var top=document.createElement('div');
+  top.className='mat-card-top';
+  var icoDiv=document.createElement('div');
+  icoDiv.className='mat-ico';
+  icoDiv.style.background=getCatBg(m.cat);
+  icoDiv.textContent=ico;
+  var info=document.createElement('div');
+  info.className='mat-card-info';
+  var nameDiv=document.createElement('div');
+  nameDiv.className='mat-card-name';
+  nameDiv.textContent=m.name;
+  var catDiv=document.createElement('div');
+  catDiv.className='mat-card-cat';
+  catDiv.textContent=m.cat+' · '+m.id;
+  info.appendChild(nameDiv);
+  info.appendChild(catDiv);
+  top.appendChild(icoDiv);
+  top.appendChild(info);
+  card.appendChild(top);
+
+  /* price row */
+  var priceRow=document.createElement('div');
+  priceRow.className='mat-price-row';
+  var priceSpan=document.createElement('span');
+  priceSpan.className='mat-price';
+  priceSpan.textContent=fmtOMR(m.price);
+  priceSpan.setAttribute('role','button');
+  priceSpan.setAttribute('tabindex','0');
+  priceSpan.setAttribute('aria-label','Edit price for '+m.name+': currently '+fmtOMR(m.price)+' OMR per '+m.unit);
+  priceSpan.title='Click to edit price';
+  priceSpan.addEventListener('click',function(){startPriceEdit(m,priceSpan,priceRow);});
+  priceSpan.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();startPriceEdit(m,priceSpan,priceRow);}});
+  var unitSpan=document.createElement('span');
+  unitSpan.className='mat-price-unit';
+  unitSpan.textContent='OMR / '+m.unit;
+  priceRow.appendChild(priceSpan);
+  priceRow.appendChild(unitSpan);
+  card.appendChild(priceRow);
+  var dateDiv=document.createElement('div');
+  dateDiv.className='mat-price-date';
+  dateDiv.textContent='Last purchase: '+m.date+(m.supplier?' · '+m.supplier:'');
+  card.appendChild(dateDiv);
+
+  /* stock */
+  var stockRow=document.createElement('div');
+  stockRow.className='mat-stock-row';
+  var stockLabel=document.createElement('div');
+  stockLabel.className='mat-stock-label';
+  var stockText=document.createElement('span');
+  stockText.className='mat-stock-text';
+  stockText.style.color=color;
+  var levelLabel=sl.charAt(0).toUpperCase()+sl.slice(1);
+  stockText.textContent='Stock: '+m.stock.toLocaleString()+' '+m.unit+' ('+levelLabel+')';
+  var reorderText=document.createElement('span');
+  reorderText.className='mat-stock-reorder';
+  reorderText.textContent='Reorder: '+m.reorder.toLocaleString();
+  stockLabel.appendChild(stockText);
+  stockLabel.appendChild(reorderText);
+  var progress=document.createElement('div');
+  progress.className='mat-progress';
+  var bar=document.createElement('div');
+  bar.className='mat-progress-bar';
+  bar.style.width=pct+'%';
+  bar.style.background=color;
+  progress.appendChild(bar);
+  stockRow.appendChild(stockLabel);
+  stockRow.appendChild(progress);
+  card.appendChild(stockRow);
+
+  /* tags */
+  if(m.tag){
+    var tags=document.createElement('div');
+    tags.className='mat-tags';
+    var tagBadge=document.createElement('span');
+    tagBadge.className='badge '+tagClass(m.tag);
+    tagBadge.textContent=m.tag;
+    tags.appendChild(tagBadge);
+    card.appendChild(tags);
+  }
+
+  /* action buttons */
+  var actions=document.createElement('div');
+  actions.className='mat-actions';
+  var btnQ=document.createElement('button');
+  btnQ.className='btn btn-ghost btn-sm';
+  btnQ.textContent='💬 Quote';
+  btnQ.setAttribute('aria-label','Request quote for '+m.name);
+  btnQ.addEventListener('click',function(){requestQuote(m);});
+  var btnPR=document.createElement('button');
+  btnPR.className='btn btn-pri btn-sm';
+  btnPR.textContent='＋ Add to PR';
+  btnPR.setAttribute('aria-label','Add '+m.name+' to purchase request');
+  btnPR.addEventListener('click',function(){addToPR(m);});
+  var btnH=document.createElement('button');
+  btnH.className='btn btn-ghost btn-sm';
+  btnH.textContent='📈 History';
+  btnH.setAttribute('aria-label','View price history for '+m.name);
+  btnH.addEventListener('click',function(){openHistory(m);});
+  actions.appendChild(btnQ);
+  actions.appendChild(btnPR);
+  actions.appendChild(btnH);
+  card.appendChild(actions);
+
+  return card;
+}
+
+/** Return a background colour string for a given category */
+function getCatBg(cat){
+  var map={
+    'Bitumen':'rgba(232,97,44,.12)',
+    'Fuel':'rgba(232,147,10,.13)',
+    'Stone':'rgba(124,58,237,.12)',
+    'Equipment':'rgba(45,125,210,.12)',
+    'Steel':'rgba(139,148,158,.15)',
+    'Cement':'rgba(29,176,106,.12)',
+    'Chemical':'rgba(229,72,77,.12)',
+    'Pipe':'rgba(45,125,210,.12)'
+  };
+  return map[cat]||'rgba(15,17,23,.07)';
+}
+
+/* ---- Inline price editing ---- */
+/** Replace the price span with an input for inline editing */
+function startPriceEdit(m,priceSpan,priceRow){
+  var input=document.createElement('input');
+  input.className='mat-price-input';
+  input.type='number';
+  input.step='any';
+  input.value=m.price;
+  input.setAttribute('aria-label','Edit price for '+m.name);
+  priceRow.replaceChild(input,priceSpan);
+  input.focus();
+  input.select();
+  function commit(){
+    var newVal=parseFloat(input.value);
+    if(!isNaN(newVal)&&newVal>0){
+      m.price=parseFloat(newVal.toFixed(3));
+      m.date=new Date().toISOString().slice(0,10);
+      savePriceToFirestore(m);
+      toast('Price updated: '+m.name+' → OMR '+fmtOMR(m.price)+'/'+m.unit);
+    }
+    priceRow.replaceChild(priceSpan,input);
+    priceSpan.textContent=fmtOMR(m.price);
+  }
+  input.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){commit();}
+    if(e.key==='Escape'){priceRow.replaceChild(priceSpan,input);}
+  });
+  input.addEventListener('blur',commit);
+}
+
+/** Persist a material's updated price to Firestore */
+function savePriceToFirestore(m){
+  if(!db){return;}
+  try{
+    db.collection('nexus_materials').doc(m.id).set({
+      id:m.id,name:m.name,cat:m.cat,unit:m.unit,
+      price:m.price,date:m.date,stock:m.stock,
+      reorder:m.reorder,supplier:m.supplier||'',tag:m.tag||'',
+      updatedAt:Date.now(),by:SEED.user.name
+    },{merge:true});
+  }catch(e){
+    console.warn('Firestore write failed',e);
+  }
+}
+
+/* ---- Table view rendering ---- */
+/** Render the materials table body rows */
+function renderTableView(items){
+  var tbody=$('#matTableBody');
+  tbody.innerHTML='';
+  items.forEach(function(m){
+    var tr=document.createElement('tr');
+    if(selectedIds.has(m.id)){tr.classList.add('selected');}
+    tr.dataset.id=m.id;
+
+    /* checkbox */
+    var tdChk=document.createElement('td');
+    tdChk.className='tbl-check';
+    var chk=document.createElement('input');
+    chk.type='checkbox';
+    chk.checked=selectedIds.has(m.id);
+    chk.setAttribute('aria-label','Select '+m.name);
+    chk.addEventListener('change',function(){
+      toggleSelect(m.id,chk.checked);
+      tr.classList.toggle('selected',chk.checked);
+    });
+    tdChk.appendChild(chk);
+    tr.appendChild(tdChk);
+
+    /* icon */
+    var tdIco=document.createElement('td');
+    var icoSpan=document.createElement('span');
+    icoSpan.className='tbl-ico';
+    icoSpan.textContent=CAT_ICONS[m.cat]||'📦';
+    tdIco.appendChild(icoSpan);
+    tr.appendChild(tdIco);
+
+    /* name */
+    var tdName=document.createElement('td');
+    tdName.className='td-name';
+    tdName.textContent=m.name;
+    tr.appendChild(tdName);
+
+    /* category */
+    var tdCat=document.createElement('td');
+    var catBadge=document.createElement('span');
+    catBadge.className='badge b-grey';
+    catBadge.textContent=m.cat;
+    tdCat.appendChild(catBadge);
+    tr.appendChild(tdCat);
+
+    /* unit */
+    var tdUnit=document.createElement('td');
+    tdUnit.textContent=m.unit;
+    tdUnit.style.color='var(--muted)';
+    tdUnit.style.fontSize='12px';
+    tr.appendChild(tdUnit);
+
+    /* price (clickable for inline edit) */
+    var tdPrice=document.createElement('td');
+    tdPrice.className='td-price';
+    var priceCell=document.createElement('span');
+    priceCell.textContent=fmtOMR(m.price)+' OMR';
+    priceCell.setAttribute('role','button');
+    priceCell.setAttribute('tabindex','0');
+    priceCell.setAttribute('aria-label','Edit price for '+m.name);
+    priceCell.title='Click to edit price';
+    priceCell.addEventListener('click',function(){startTablePriceEdit(m,priceCell,tdPrice);});
+    priceCell.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();startTablePriceEdit(m,priceCell,tdPrice);}});
+    tdPrice.appendChild(priceCell);
+    tr.appendChild(tdPrice);
+
+    /* stock progress */
+    var tdStock=document.createElement('td');
+    var stockWrap=document.createElement('div');
+    stockWrap.style.display='flex';
+    stockWrap.style.alignItems='center';
+    stockWrap.style.gap='7px';
+    var stockNum=document.createElement('span');
+    stockNum.style.fontSize='12px';
+    stockNum.style.fontWeight='700';
+    stockNum.textContent=m.stock.toLocaleString();
+    var progWrap=document.createElement('div');
+    progWrap.className='tbl-progress';
+    var progBar=document.createElement('div');
+    progBar.className='tbl-progress-bar';
+    progBar.style.width=stockPct(m)+'%';
+    progBar.style.background=stockColor(m);
+    progWrap.appendChild(progBar);
+    stockWrap.appendChild(stockNum);
+    stockWrap.appendChild(progWrap);
+    tdStock.appendChild(stockWrap);
+    tr.appendChild(tdStock);
+
+    /* status badge */
+    var tdStatus=document.createElement('td');
+    var sl=stockLevel(m);
+    var statusBadge=document.createElement('span');
+    if(sl==='critical'){
+      statusBadge.className='badge b-red';
+      statusBadge.textContent='Critical';
+    }else if(sl==='low'){
+      statusBadge.className='badge b-amber';
+      statusBadge.textContent='Low';
+    }else{
+      statusBadge.className='badge b-green';
+      statusBadge.textContent='OK';
+    }
+    tdStatus.appendChild(statusBadge);
+    tr.appendChild(tdStatus);
+
+    /* supplier */
+    var tdSup=document.createElement('td');
+    tdSup.style.fontSize='11.5px';
+    tdSup.style.color='var(--muted)';
+    tdSup.textContent=m.supplier||'—';
+    tr.appendChild(tdSup);
+
+    /* tags */
+    var tdTags=document.createElement('td');
+    if(m.tag){
+      var tagBadge=document.createElement('span');
+      tagBadge.className='badge '+tagClass(m.tag);
+      tagBadge.textContent=m.tag;
+      tdTags.appendChild(tagBadge);
+    }else{
+      tdTags.textContent='—';
+      tdTags.style.color='var(--muted)';
+    }
+    tr.appendChild(tdTags);
+
+    /* actions */
+    var tdAct=document.createElement('td');
+    var actWrap=document.createElement('div');
+    actWrap.className='tbl-actions';
+    var btnQ=document.createElement('button');
+    btnQ.className='btn btn-ghost btn-sm';
+    btnQ.textContent='Quote';
+    btnQ.setAttribute('aria-label','Request quote for '+m.name);
+    btnQ.addEventListener('click',function(){requestQuote(m);});
+    var btnPR=document.createElement('button');
+    btnPR.className='btn btn-pri btn-sm';
+    btnPR.textContent='＋ PR';
+    btnPR.setAttribute('aria-label','Add '+m.name+' to purchase request');
+    btnPR.addEventListener('click',function(){addToPR(m);});
+    var btnH=document.createElement('button');
+    btnH.className='btn btn-ghost btn-sm';
+    btnH.textContent='📈';
+    btnH.setAttribute('aria-label','View price history for '+m.name);
+    btnH.setAttribute('title','Price history');
+    btnH.addEventListener('click',function(){openHistory(m);});
+    actWrap.appendChild(btnQ);
+    actWrap.appendChild(btnPR);
+    actWrap.appendChild(btnH);
+    tdAct.appendChild(actWrap);
+    tr.appendChild(tdAct);
+
+    tbody.appendChild(tr);
+  });
+  /* sync select-all checkbox */
+  var sa=$('#selectAll');
+  if(sa){
+    if(selectedIds.size===0){sa.checked=false;sa.indeterminate=false;}
+    else if(selectedIds.size===items.length){sa.checked=true;sa.indeterminate=false;}
+    else{sa.checked=false;sa.indeterminate=true;}
+  }
+}
+
+/** Inline price edit for table view cells */
+function startTablePriceEdit(m,priceCell,tdPrice){
+  var input=document.createElement('input');
+  input.className='mat-price-input';
+  input.type='number';
+  input.step='any';
+  input.style.width='110px';
+  input.value=m.price;
+  input.setAttribute('aria-label','Edit price for '+m.name);
+  tdPrice.replaceChild(input,priceCell);
+  input.focus();
+  input.select();
+  function commit(){
+    var newVal=parseFloat(input.value);
+    if(!isNaN(newVal)&&newVal>0){
+      m.price=parseFloat(newVal.toFixed(3));
+      m.date=new Date().toISOString().slice(0,10);
+      savePriceToFirestore(m);
+      toast('Price updated: '+m.name+' → OMR '+fmtOMR(m.price)+'/'+m.unit);
+    }
+    priceCell.textContent=fmtOMR(m.price)+' OMR';
+    tdPrice.replaceChild(priceCell,input);
+  }
+  input.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){commit();}
+    if(e.key==='Escape'){tdPrice.replaceChild(priceCell,input);}
+  });
+  input.addEventListener('blur',commit);
+}
+
+/* ---- Selection management ---- */
+/** Toggle selection state for a single material by id */
+function toggleSelect(id,checked){
+  if(checked){
+    selectedIds.add(id);
+  }else{
+    selectedIds.delete(id);
+  }
+  updateBulkBar();
+}
+/** Toggle all visible items as selected or deselected */
+function toggleSelectAll(checked){
+  var items=getFilteredMaterials();
+  items.forEach(function(m){
+    if(checked){selectedIds.add(m.id);}
+    else{selectedIds.delete(m.id);}
+  });
+  renderCatalog();
+  updateBulkBar();
+}
+/** Deselect all materials and re-render */
+function clearSelection(){
+  selectedIds.clear();
+  var sa=$('#selectAll');
+  if(sa){sa.checked=false;sa.indeterminate=false;}
+  renderCatalog();
+  updateBulkBar();
+}
+/** Show or hide the bulk action bar based on selection count */
+function updateBulkBar(){
+  var bar=$('#bulkBar');
+  var count=$('#bulkCount');
+  if(selectedIds.size>0){
+    bar.classList.add('open');
+    count.textContent=selectedIds.size+' item'+(selectedIds.size===1?'':' s')+' selected';
+  }else{
+    bar.classList.remove('open');
+  }
+}
+
+/* ---- Bulk actions ---- */
+/** Create a purchase request from selected materials */
+function bulkCreatePR(){
+  var n=selectedIds.size;
+  if(n===0){toast('No materials selected');return;}
+  var names=[];
+  SEED.materials.forEach(function(m){
+    if(selectedIds.has(m.id)){names.push(m.name.split(' ').slice(0,3).join(' '));}
+  });
+  var desc=names.slice(0,2).join(', ')+(names.length>2?' + '+(names.length-2)+' more':'');
+  var totalEst=0;
+  SEED.materials.forEach(function(m){
+    if(selectedIds.has(m.id)){totalEst+=m.price*Math.max(m.reorder-m.stock,0);}
+  });
+  toast('📋 Purchase Request created for '+n+' material'+(n===1?'':'s')+' ('+desc+') — est. OMR '+fmtOMR(totalEst));
+  clearSelection();
+}
+/** Request quotes for selected materials */
+function bulkRequestQuote(){
+  var n=selectedIds.size;
+  if(n===0){toast('No materials selected');return;}
+  toast('💬 Quote request sent to default suppliers for '+n+' material'+(n===1?'':'s'));
+  clearSelection();
+}
+
+/* ---- Quick action helpers ---- */
+/** Request a quote for a single material */
+function requestQuote(m){
+  toast('💬 Quote request sent to '+( m.supplier||'preferred supplier')+' for '+m.name);
+}
+/** Add a single material to a new purchase request */
+function addToPR(m){
+  var qty=Math.max(m.reorder-m.stock,1);
+  var est=m.price*qty;
+  toast('📋 '+m.name+' added to Purchase Request — '+qty+' '+m.unit+' · est. OMR '+fmtOMR(est));
+}
+
+/* ---- History modal ---- */
+/** Open the price history modal for the given material */
+function openHistory(m){
+  activeHistMaterialId=m.id;
+  $('#histModalTitle').textContent='Price History — '+m.id;
+  $('#histMaterialName').textContent=m.name+' · '+m.unit;
+  var hist=buildHistory(m);
+  var list=$('#histList');
+  list.innerHTML='';
+  var prev=null;
+  hist.forEach(function(h){
+    var row=document.createElement('div');
+    row.className='hist-row';
+    var dateEl=document.createElement('div');
+    dateEl.className='hist-date';
+    dateEl.textContent=h.date+(h.current?' (Current)':'');
+    var priceEl=document.createElement('div');
+    priceEl.className='hist-price';
+    priceEl.textContent='OMR '+fmtOMR(h.price)+' / '+m.unit;
+    var supEl=document.createElement('div');
+    supEl.className='hist-supplier';
+    supEl.textContent=h.supplier;
+    var deltaEl=document.createElement('div');
+    if(prev!==null){
+      var pct=((h.price-prev)/prev*100);
+      deltaEl.className='hist-delta '+(pct>0?'up':(pct<0?'dn':'flat'));
+      deltaEl.textContent=(pct>0?'+':'')+pct.toFixed(1)+'%';
+    }else{
+      deltaEl.className='hist-delta flat';
+      deltaEl.textContent='base';
+    }
+    prev=h.price;
+    row.appendChild(dateEl);
+    row.appendChild(priceEl);
+    row.appendChild(deltaEl);
+    row.appendChild(supEl);
+    list.appendChild(row);
+  });
+  openModal('historyModal');
+}
+/** Request a quote from within the history modal */
+function requestQuoteFromHistory(){
+  if(!activeHistMaterialId){return;}
+  var m=SEED.materials.find(function(x){return x.id===activeHistMaterialId;});
+  if(m){requestQuote(m);}
+  closeModal('historyModal');
+}
+
+/* ---- Add material modal ---- */
+/** Open the add material modal */
+function openAddModal(){
+  openModal('addModal');
+}
+/** Submit the add material form */
+function submitAddMaterial(){
+  var name=$('#addName').value.trim();
+  if(!name){toast('Please enter a material name');return;}
+  var price=parseFloat($('#addPrice').value)||0;
+  var stock=parseInt($('#addStock').value)||0;
+  var reorder=parseInt($('#addReorder').value)||0;
+  var newId='M-'+String(1000+SEED.materials.length+1);
+  var mat={
+    id:newId,
+    name:name,
+    cat:$('#addCat').value,
+    unit:$('#addUnit').value,
+    price:price,
+    date:new Date().toISOString().slice(0,10),
+    stock:stock,
+    reorder:reorder,
+    supplier:$('#addSupplier').value.trim()||'',
+    tag:$('#addTag').value||''
+  };
+  SEED.materials.unshift(mat);
+  savePriceToFirestore(mat);
+  closeModal('addModal');
+  $('#addName').value='';
+  $('#addPrice').value='';
+  $('#addStock').value='';
+  $('#addReorder').value='';
+  $('#addSupplier').value='';
+  renderCatalog();
+  toast('✅ '+mat.id+' — '+mat.name+' added to catalog');
+}
+
+/* ---- Filter panel mobile toggle ---- */
+/** Toggle the filter panel visibility on mobile */
+function toggleFilterPanel(){
+  var panel=$('#filterPanel');
+  var btn=$('#filterToggleBtn');
+  var isOpen=panel.classList.contains('mobile-open');
+  panel.classList.toggle('mobile-open',!isOpen);
+  btn.setAttribute('aria-expanded',!isOpen?'true':'false');
+}
+
+/* ---- CSV Export ---- */
+/** Export the current filtered materials as a downloadable CSV file */
+function exportCSV(){
+  var items=getFilteredMaterials();
+  var rows=['ID,Name,Category,Unit,Last Price (OMR),Date,Stock,Reorder,Supplier,Tag'];
+  items.forEach(function(m){
+    rows.push([m.id,'"'+m.name+'"',m.cat,m.unit,m.price,m.date,m.stock,m.reorder,'"'+(m.supplier||'')+'"',m.tag||''].join(','));
+  });
+  var blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='nexus-materials-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('⬇ Exported '+items.length+' materials as CSV');
+}
+
+/* ---- Modal helpers ---- */
+/** Open a modal overlay by id */
+function openModal(id){
+  var el=$('#'+id);
+  if(el){el.classList.add('open');}
+}
+/** Close a modal overlay by id */
+function closeModal(id){
+  var el=$('#'+id);
+  if(el){el.classList.remove('open');}
+}
+
+/* ---- Keyboard and click-outside modal dismissal ---- */
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    document.querySelectorAll('.overlay.open').forEach(function(o){o.classList.remove('open');});
+  }
+});
+document.addEventListener('click',function(e){
+  document.querySelectorAll('.overlay.open').forEach(function(o){
+    if(e.target===o){o.classList.remove('open');}
+  });
+});
+
+/* ---- Boot ---- */
+/** Main boot sequence: theme, shell, filters, catalog, search, live */
+function boot(){
+  initTheme();
+  renderShell();
+  buildFilterPanel();
+  renderCatalog();
+  initSearch();
+  initLive();
+}
+document.addEventListener('DOMContentLoaded',boot);
+
+/* ---- PWA ---- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('nexus-sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>

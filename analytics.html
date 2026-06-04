@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ERP Nexus — Analytics</title>
+<meta name="theme-color" content="#E8612C">
+<meta name="description" content="ERP Nexus — Procurement & Construction Intelligence Platform">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<link rel="manifest" href="nexus-manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ============================================================
+   ERP NEXUS — SHARED DESIGN SYSTEM (canonical, replicated per module)
+   ============================================================ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --primary:#E8612C;--primary-d:#C44D1E;--primary-l:rgba(232,97,44,.09);
+  --blue:#2D7DD2;--blue-l:rgba(45,125,210,.1);
+  --green:#1DB06A;--amber:#E8930A;--red:#E5484D;--purple:#7C3AED;
+  --bg:#F4F5F9;--surface:#FFFFFF;--surface-2:#FAFBFE;
+  --text:#0F1117;--muted:#7B8299;--border:#E7EAF2;
+  --sh-sm:0 1px 3px rgba(15,17,23,.06);
+  --sh:0 1px 3px rgba(15,17,23,.06),0 6px 18px rgba(15,17,23,.05);
+  --sh-lg:0 20px 40px rgba(15,17,23,.16);
+  --r:12px;--r-sm:8px;--r-lg:16px;
+  --glass:rgba(255,255,255,.72);
+}
+[data-theme="dark"]{
+  --bg:#0E1016;--surface:#171A22;--surface-2:#1E222C;
+  --text:#EEF1F7;--muted:#8A92A6;--border:#272C38;
+  --primary-l:rgba(232,97,44,.16);--blue-l:rgba(45,125,210,.18);
+  --glass:rgba(23,26,34,.72);
+  --sh-sm:0 1px 3px rgba(0,0,0,.4);--sh:0 1px 3px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3);
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;font-size:14px;}
+button{font-family:inherit;cursor:pointer;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+/* ---- App shell ---- */
+.shell{display:flex;height:100vh;height:100dvh;}
+.sb{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;height:100vh;height:100dvh;transition:width .2s;}
+.sb-head{padding:18px 16px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);}
+.sb-mark{width:38px;height:38px;background:linear-gradient(135deg,var(--primary),#F4863F);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:15px;flex-shrink:0;box-shadow:0 4px 12px rgba(232,97,44,.35);}
+.sb-brand{font-size:15px;font-weight:800;letter-spacing:-.3px;}
+.sb-brand span{color:var(--primary);}
+.sb-ver{font-size:10px;color:var(--muted);font-weight:600;}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0;}
+.sb-sec{padding:14px 16px 6px;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase;}
+.nav-i{display:flex;align-items:center;gap:11px;padding:10px 14px;margin:2px 9px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;transition:background .15s,color .15s;}
+.nav-i:hover{background:var(--surface-2);color:var(--text);}
+.nav-i.active{background:var(--primary-l);color:var(--primary);font-weight:700;}
+.nav-ico{font-size:17px;width:20px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:1px 7px;border-radius:9px;}
+.sb-foot{padding:12px;border-top:1px solid var(--border);}
+.u-card{display:flex;align-items:center;gap:10px;}
+.u-av{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue),#5AA0E6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex-shrink:0;}
+.u-name{font-size:12.5px;font-weight:700;}
+.u-role{font-size:10.5px;color:var(--muted);}
+.icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--muted);transition:all .15s;}
+.icon-btn:hover{color:var(--primary);border-color:var(--primary);}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.topbar{background:var(--glass);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;gap:16px;flex-shrink:0;z-index:30;}
+.tb-title h1{font-size:17px;font-weight:800;letter-spacing:-.3px;}
+.tb-title p{font-size:11.5px;color:var(--muted);}
+.search-wrap{flex:1;max-width:480px;position:relative;}
+.search-box{width:100%;height:40px;padding:0 14px 0 40px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;}
+.search-box:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);background:var(--surface);}
+.search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none;}
+.search-kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 6px;background:var(--surface);}
+.tb-actions{display:flex;align-items:center;gap:9px;margin-left:auto;}
+.live-pill{display:flex;align-items:center;gap:6px;background:rgba(29,176,106,.1);border:1px solid rgba(29,176,106,.25);color:var(--green);padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
+.live-pill.offline{background:rgba(232,147,10,.1);border-color:rgba(232,147,10,.3);color:var(--amber);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(1.6);}}
+
+.content{flex:1;overflow-y:auto;padding:20px 22px 90px;}
+.page-grid{max-width:1440px;margin:0 auto;}
+
+/* ---- KPI cards ---- */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:18px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh-sm);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--sh);}
+.kpi-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:11px;}
+.kpi-lbl{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:3px;}
+.kpi-val{font-size:25px;font-weight:800;letter-spacing:-.5px;line-height:1;}
+.kpi-sub{font-size:10.5px;font-weight:700;margin-top:5px;display:flex;align-items:center;gap:3px;}
+.kpi.alert{border-color:rgba(229,72,77,.35);}
+.kpi.alert .kpi-val{color:var(--red);animation:pulseRed 1.8s infinite;}
+@keyframes pulseRed{0%,100%{opacity:1;}50%{opacity:.55;}}
+.up{color:var(--green);}.dn{color:var(--red);}
+
+/* ---- Cards / layout ---- */
+.grid-2{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-bottom:14px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh-sm);}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.card-t{font-size:13.5px;font-weight:800;letter-spacing:-.2px;}
+.card-t small{font-weight:600;color:var(--muted);font-size:11px;margin-left:6px;}
+.link-btn{font-size:11.5px;font-weight:700;color:var(--primary);background:none;border:none;}
+
+/* ---- Action center ---- */
+.action-item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:11px;margin-bottom:9px;transition:border-color .15s;}
+.action-item:hover{border-color:var(--primary);}
+.ai-ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.ai-body{flex:1;min-width:0;}
+.ai-title{font-size:13px;font-weight:700;}
+.ai-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+.ai-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn{border:none;border-radius:var(--r-sm);font-weight:700;font-size:12px;padding:8px 14px;transition:filter .15s,background .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-pri{background:var(--primary);color:#fff;}.btn-pri:hover{background:var(--primary-d);}
+.btn-ok{background:var(--green);color:#fff;}.btn-ok:hover{filter:brightness(.93);}
+.btn-no{background:rgba(229,72,77,.12);color:var(--red);}.btn-no:hover{background:rgba(229,72,77,.2);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary);}
+.btn-sm{padding:6px 11px;font-size:11px;}
+
+/* ---- Activity feed ---- */
+.feed{display:flex;flex-direction:column;}
+.feed-i{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--border);}
+.feed-i:last-child{border-bottom:none;}
+.feed-dot{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.feed-txt{font-size:12.5px;line-height:1.5;}
+.feed-txt b{font-weight:700;}
+.feed-time{font-size:10.5px;color:var(--muted);margin-top:2px;}
+
+/* ---- badges & chips ---- */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:999px;}
+.b-green{background:rgba(29,176,106,.12);color:#0e7a4a;}
+.b-amber{background:rgba(232,147,10,.13);color:#a06003;}
+.b-red{background:rgba(229,72,77,.12);color:#c0292e;}
+.b-blue{background:var(--blue-l);color:#1a5fa0;}
+.b-grey{background:var(--surface-2);color:var(--muted);border:1px solid var(--border);}
+.chart-box{position:relative;height:230px;}
+.skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:shimmer 1.3s infinite;border-radius:8px;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+/* ---- Mobile bottom nav ---- */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--glass);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:50;justify-content:space-around;}
+.bn-i{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:9.5px;font-weight:700;}
+.bn-i.active{color:var(--primary);}
+.bn-i .nav-ico{font-size:19px;}
+
+/* ---- Search overlay results ---- */
+.search-results{position:absolute;top:46px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--sh-lg);padding:8px;max-height:60vh;overflow-y:auto;display:none;z-index:40;}
+.search-results.open{display:block;}
+.sr-group{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:8px 10px 4px;}
+.sr-i{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;}
+.sr-i:hover{background:var(--surface-2);}
+.sr-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.sr-name{font-size:12.5px;font-weight:600;}.sr-meta{font-size:10.5px;color:var(--muted);}
+.sr-ai{font-size:11.5px;color:var(--primary);font-weight:700;padding:8px 10px;}
+
+.toast-wrap{position:fixed;top:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;padding:12px 14px;box-shadow:var(--sh-lg);font-size:12.5px;font-weight:600;min-width:240px;animation:slideIn .3s ease;}
+@keyframes slideIn{from{transform:translateX(120%);}to{transform:translateX(0);}}
+
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr);}.grid-2,.grid-3{grid-template-columns:1fr;}}
+@media(max-width:760px){
+  .sb{display:none;}
+  .bottom-nav{display:flex;}
+  .topbar{padding:10px 14px;}
+  .tb-title{display:none;}
+  .search-kbd{display:none;}
+  .content{padding:14px 14px 90px;}
+  .kpis{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .live-pill span{display:none;}
+}
+
+/* ============================================================
+   ANALYTICS MODULE — additional styles
+   ============================================================ */
+
+/* ---- Date range toolbar ---- */
+.analytics-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh-sm);}
+.toolbar-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.toolbar-sep{width:1px;height:24px;background:var(--border);margin:0 4px;flex-shrink:0;}
+.date-input-wrap{display:flex;align-items:center;gap:6px;}
+.date-label{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;}
+.date-input{height:36px;padding:0 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);color:var(--text);font-size:12px;font-family:inherit;outline:none;transition:border-color .15s;}
+.date-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);}
+.preset-chip{height:32px;padding:0 12px;border:1.5px solid var(--border);border-radius:999px;background:var(--surface-2);color:var(--muted);font-size:11.5px;font-weight:700;transition:all .15s;white-space:nowrap;}
+.preset-chip:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-l);}
+.preset-chip.active{border-color:var(--primary);color:var(--primary);background:var(--primary-l);}
+.export-btn{height:34px;padding:0 14px;border-radius:var(--r-sm);font-size:11.5px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);display:inline-flex;align-items:center;gap:5px;transition:all .15s;}
+.export-btn:hover{border-color:var(--primary);color:var(--primary);}
+.export-btn.pdf-btn:hover{border-color:var(--red);color:var(--red);}
+.export-btn.excel-btn:hover{border-color:var(--green);color:var(--green);}
+.export-btn.csv-btn:hover{border-color:var(--blue);color:var(--blue);}
+
+/* ---- Dashboard builder toggle chips ---- */
+.builder-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.builder-label{font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+.toggle-chip{height:32px;padding:0 14px;border:1.5px solid var(--border);border-radius:999px;background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;transition:all .18s;cursor:pointer;}
+.toggle-chip.on{border-color:var(--primary);color:var(--primary);background:var(--primary-l);}
+.toggle-chip:hover{border-color:var(--primary);color:var(--primary);}
+
+/* ---- Report card sections ---- */
+.report-section{transition:opacity .2s;}
+.report-section.hidden{display:none;}
+.chart-box-tall{position:relative;height:260px;}
+
+/* ---- Bottleneck highlight ---- */
+.bottleneck-note{font-size:11px;color:var(--muted);margin-top:8px;text-align:center;}
+.bottleneck-note strong{color:var(--red);}
+
+/* ---- Scheduled reports card ---- */
+.schedule-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh-sm);margin-bottom:14px;}
+.schedule-card .card-h{margin-bottom:12px;}
+.schedule-form{display:flex;align-items:center;flex-wrap:wrap;gap:10px;}
+.schedule-form select,.schedule-form input[type="email"],.schedule-form input[type="number"]{height:36px;padding:0 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);color:var(--text);font-size:12.5px;font-family:inherit;outline:none;transition:border-color .15s;}
+.schedule-form select:focus,.schedule-form input[type="email"]:focus,.schedule-form input[type="number"]:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);}
+.schedule-form select{min-width:170px;}
+.schedule-form input[type="email"]{min-width:220px;}
+.schedule-form input[type="number"]{width:70px;}
+.schedule-form .form-text{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap;}
+
+/* ---- Print styles ---- */
+@media print{
+  .sb,.bottom-nav,.topbar,.analytics-toolbar,.builder-row,.schedule-card,.toast-wrap{display:none!important;}
+  .main{display:block;}
+  .content{overflow:visible;padding:0;}
+  .shell{display:block;}
+  body,html{overflow:auto;}
+  .card{break-inside:avoid;box-shadow:none;border:1px solid #ddd;}
+}
+
+/* ---- Responsive adjustments for analytics ---- */
+@media(max-width:900px){
+  .analytics-toolbar{flex-direction:column;align-items:flex-start;}
+  .toolbar-sep{display:none;}
+  .schedule-form{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- ================= SIDEBAR (shared shell) ================= -->
+  <aside class="sb" id="sidebar"></aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="tb-title">
+        <h1>Analytics</h1>
+        <p>Business intelligence</p>
+      </div>
+      <div class="search-wrap">
+        <span class="search-ico" aria-hidden="true">🔍</span>
+        <input class="search-box" id="globalSearch" placeholder="Search materials, suppliers, offers, requests…" aria-label="Global search" autocomplete="off">
+        <span class="search-kbd">Ctrl K</span>
+        <div class="search-results" id="searchResults" role="listbox"></div>
+      </div>
+      <div class="tb-actions">
+        <div class="live-pill" id="livePill"><span class="live-dot"></span><span>Live</span></div>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">🌙</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-grid">
+
+        <!-- ======= ANALYTICS TOOLBAR ======= -->
+        <section class="analytics-toolbar" aria-label="Date range and export controls">
+          <div class="toolbar-group">
+            <div class="date-input-wrap">
+              <label class="date-label" for="dateFrom">From</label>
+              <input type="date" class="date-input" id="dateFrom" aria-label="Start date">
+            </div>
+            <div class="date-input-wrap">
+              <label class="date-label" for="dateTo">To</label>
+              <input type="date" class="date-input" id="dateTo" aria-label="End date">
+            </div>
+          </div>
+          <div class="toolbar-sep" aria-hidden="true"></div>
+          <div class="toolbar-group" role="group" aria-label="Date range presets">
+            <button class="preset-chip" id="presetMonth" onclick="setPreset('month')">This Month</button>
+            <button class="preset-chip" id="presetQuarter" onclick="setPreset('quarter')">Last Quarter</button>
+            <button class="preset-chip" id="presetYTD" onclick="setPreset('ytd')">YTD</button>
+          </div>
+          <div class="toolbar-sep" aria-hidden="true"></div>
+          <div class="toolbar-group" role="group" aria-label="Export options">
+            <button class="export-btn pdf-btn" onclick="exportPDF()" aria-label="Export as PDF">🖨 PDF</button>
+            <button class="export-btn excel-btn" onclick="exportExcel()" aria-label="Export spend data as Excel">📊 Excel</button>
+            <button class="export-btn csv-btn" onclick="exportCSV()" aria-label="Export spend data as CSV">📥 CSV</button>
+          </div>
+        </section>
+
+        <!-- ======= DASHBOARD BUILDER ======= -->
+        <div class="builder-row" role="group" aria-label="Toggle report cards">
+          <span class="builder-label">Show:</span>
+          <button class="toggle-chip on" id="chip-category" onclick="toggleCard('category')" aria-pressed="true">Category</button>
+          <button class="toggle-chip on" id="chip-trend" onclick="toggleCard('trend')" aria-pressed="true">Trend</button>
+          <button class="toggle-chip on" id="chip-suppliers" onclick="toggleCard('suppliers')" aria-pressed="true">Suppliers</button>
+          <button class="toggle-chip on" id="chip-price" onclick="toggleCard('price')" aria-pressed="true">Price</button>
+          <button class="toggle-chip on" id="chip-bottleneck" onclick="toggleCard('bottleneck')" aria-pressed="true">Bottleneck</button>
+        </div>
+
+        <!-- ======= ROW 1: Spend by Category + Monthly Trend ======= -->
+        <div class="grid-2" id="row-cat-trend">
+          <!-- Report 1: Spend by Category -->
+          <section class="card report-section" id="section-category" aria-labelledby="titleCategory">
+            <div class="card-h">
+              <div class="card-t" id="titleCategory">Spend Analysis by Category <small>OMR · YTD</small></div>
+            </div>
+            <div class="chart-box-tall">
+              <canvas id="chartCategory" aria-describedby="descCategory"></canvas>
+            </div>
+            <p id="descCategory" class="sr-only" style="position:absolute;left:-9999px;">Doughnut chart showing spend by material category: Equipment leads at approximately 9,800 OMR, followed by Steel, Bitumen, Stone, Cement, and Fuel.</p>
+          </section>
+
+          <!-- Report 2: Monthly Spend Trend -->
+          <section class="card report-section" id="section-trend" aria-labelledby="titleTrend">
+            <div class="card-h">
+              <div class="card-t" id="titleTrend">Monthly Spend Trend <small>last 12 months · OMR '000</small></div>
+            </div>
+            <div class="chart-box-tall">
+              <canvas id="chartTrend" aria-describedby="descTrend"></canvas>
+            </div>
+            <p id="descTrend" style="position:absolute;left:-9999px;">Line chart showing monthly spend trend over 12 months from July to June. Spend ranges from 38K to 72K OMR with an upward trend, peaking at 72K in May and settling at 64.7K in June.</p>
+          </section>
+        </div>
+
+        <!-- ======= ROW 2: Supplier Performance + Bitumen Price Trends ======= -->
+        <div class="grid-2" id="row-sup-price">
+          <!-- Report 3: Supplier Performance -->
+          <section class="card report-section" id="section-suppliers" aria-labelledby="titleSuppliers">
+            <div class="card-h">
+              <div class="card-t" id="titleSuppliers">Supplier Performance Ranking <small>on-time % vs orders</small></div>
+            </div>
+            <div class="chart-box-tall">
+              <canvas id="chartSuppliers" aria-describedby="descSuppliers"></canvas>
+            </div>
+            <p id="descSuppliers" style="position:absolute;left:-9999px;">Horizontal bar chart ranking suppliers by on-time delivery percentage. AL MAHA PETROLEUM leads at 99%, BRIGHT LIGHT TRADING at 96%, JABAL QUARRIES at 88%, OMAN HEAVY LIFT at 79%, and AL ASM NEW at 0%.</p>
+          </section>
+
+          <!-- Report 4: Bitumen Price Trend -->
+          <section class="card report-section" id="section-price" aria-labelledby="titlePrice">
+            <div class="card-h">
+              <div class="card-t" id="titlePrice">Bitumen Price Trend <small>OMR/ton · volatility</small></div>
+            </div>
+            <div class="chart-box-tall">
+              <canvas id="chartPrice" aria-describedby="descPrice"></canvas>
+            </div>
+            <p id="descPrice" style="position:absolute;left:-9999px;">Line chart showing bitumen 60/70 price volatility over 8 months from November to June. Prices fluctuate between 270 and 298 OMR per ton, with a peak in January at 298 and current price at 285.</p>
+          </section>
+        </div>
+
+        <!-- ======= ROW 3: Approval Bottleneck (full width) ======= -->
+        <div class="grid-2" id="row-bottleneck">
+          <section class="card report-section" id="section-bottleneck" aria-labelledby="titleBottleneck" style="grid-column:1/-1;">
+            <div class="card-h">
+              <div class="card-t" id="titleBottleneck">Approval Bottleneck Analysis <small>avg. days per stage</small></div>
+            </div>
+            <div class="chart-box-tall">
+              <canvas id="chartBottleneck" aria-describedby="descBottleneck"></canvas>
+            </div>
+            <p id="descBottleneck" style="position:absolute;left:-9999px;">Bar chart showing average days spent at each approval stage. Submitted takes 0.5 days, Level 1 takes 0.8 days, Level 2 takes 1.4 days, and Level 3 takes 2.1 days — identified as the main bottleneck, highlighted in red.</p>
+            <p class="bottleneck-note">Bottleneck identified: <strong>Level 3 approval averages 2.1 days</strong> — consider delegating authority or setting SLA alerts.</p>
+          </section>
+        </div>
+
+        <!-- ======= SCHEDULED REPORTS ======= -->
+        <section class="schedule-card" aria-labelledby="titleSchedule">
+          <div class="card-h">
+            <div class="card-t" id="titleSchedule">📅 Scheduled Reports</div>
+          </div>
+          <form class="schedule-form" id="scheduleForm" onsubmit="saveSchedule(event)" aria-label="Schedule a report delivery">
+            <span class="form-text">Send</span>
+            <select id="scheduleReport" aria-label="Select report type">
+              <option value="Monthly Spend">Monthly Spend</option>
+              <option value="Supplier Performance">Supplier Performance</option>
+              <option value="Spend by Category">Spend by Category</option>
+              <option value="Bitumen Price Trend">Bitumen Price Trend</option>
+              <option value="Approval Bottleneck">Approval Bottleneck</option>
+            </select>
+            <span class="form-text">report to</span>
+            <input type="email" id="scheduleEmail" value="sonr.fmg@gmail.com" aria-label="Recipient email address" required>
+            <span class="form-text">on the</span>
+            <input type="number" id="scheduleDay" value="1" min="1" max="28" aria-label="Day of month" required>
+            <span class="form-text">of every month</span>
+            <button type="submit" class="btn btn-pri btn-sm">Save Schedule</button>
+          </form>
+        </section>
+
+      </div>
+    </div>
+  </main>
+</div>
+<nav class="bottom-nav" id="bottomNav" aria-label="Primary"></nav>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ============================================================
+   ERP NEXUS — shared runtime (firebase, shell, seed, helpers)
+   ============================================================ */
+"use strict";
+
+/* ---- Firebase (shared project) ---- */
+var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
+var db=null;
+try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){console.warn('firebase init',e);}
+
+/* ---- Navigation model (shared across all modules) ---- */
+var NAV=[
+  {sec:'Overview'},
+  {id:'dashboard',label:'Command Center',ico:'◈',href:'dashboard.html'},
+  {id:'analytics',label:'Analytics',ico:'📊',href:'analytics.html'},
+  {sec:'Procurement'},
+  {id:'materials',label:'Materials',ico:'📦',href:'materials.html'},
+  {id:'suppliers',label:'Suppliers',ico:'🏭',href:'suppliers.html'},
+  {id:'offers',label:'Offers',ico:'🏷️',href:'offers.html'},
+  {id:'purchaserequests',label:'Purchase Requests',ico:'📋',href:'purchaserequests.html',badge:'pr'},
+  {sec:'Workspace'},
+  {id:'notifications',label:'Notifications',ico:'🔔',href:'notifications.html',badge:'notif'},
+  {id:'settings',label:'Settings',ico:'⚙️',href:'settings.html'}
+];
+var BOTTOM=['dashboard','materials','purchaserequests','suppliers','notifications'];
+var CURRENT='analytics'; /* analytics module */
+
+/* ---- Realistic Omani construction seed data ---- */
+var SEED={
+  meta:{project:'Hadbin Road & Infrastructure',currency:'OMR'},
+  user:{name:'Salim Al-Harthy',role:'Procurement Officer',initials:'SH'},
+  materials:[
+    {id:'M-1001',name:'Bitumen 60/70 Penetration Grade',cat:'Bitumen',unit:'ton',price:285.0,date:'2026-05-22',stock:42,reorder:60,supplier:'BRIGHT LIGHT TRADING',tag:'Critical'},
+    {id:'M-1002',name:'Diesel Fuel (Gas Oil)',cat:'Fuel',unit:'liter',price:0.196,date:'2026-05-30',stock:18500,reorder:20000,supplier:'AL MAHA PETROLEUM',tag:'Fast Moving'},
+    {id:'M-1003',name:'Aggregate Stone 20mm',cat:'Stone',unit:'ton',price:4.2,date:'2026-05-18',stock:980,reorder:500,supplier:'JABAL QUARRIES LLC',tag:'Fast Moving'},
+    {id:'M-1004',name:'Crawler Crane 150T (Rental/Month)',cat:'Equipment',unit:'month',price:9800.0,date:'2026-04-11',stock:1,reorder:1,supplier:'OMAN HEAVY LIFT',tag:'Seasonal'},
+    {id:'M-1005',name:'Reinforcement Steel Bar 16mm',cat:'Steel',unit:'ton',price:312.5,date:'2026-05-27',stock:28,reorder:40,supplier:'MUSCAT STEEL',tag:'Critical'},
+    {id:'M-1006',name:'Portland Cement OPC 42.5N',cat:'Cement',unit:'bag',price:1.65,date:'2026-05-29',stock:3400,reorder:2000,supplier:'OMAN CEMENT CO',tag:'Fast Moving'},
+    {id:'M-1007',name:'Sub-base Material 0-40mm',cat:'Stone',unit:'ton',price:3.1,date:'2026-05-15',stock:1420,reorder:800},
+    {id:'M-1008',name:'MC-30 Prime Coat Emulsion',cat:'Bitumen',unit:'liter',price:0.42,date:'2026-05-20',stock:6200,reorder:5000,tag:'New'}
+  ],
+  suppliers:[
+    {id:'S-01',name:'BRIGHT LIGHT TRADING',bin:'1029384',loc:'Muscat',score:'A',phone:'+96899112233',email:'sales@brightlight.om',orders:48,onTime:96,priceVsMkt:-4},
+    {id:'S-02',name:'AL MAHA PETROLEUM',bin:'1182736',loc:'Muscat',score:'A',phone:'+96892334455',email:'b2b@almaha.om',orders:120,onTime:99,priceVsMkt:0},
+    {id:'S-03',name:'JABAL QUARRIES LLC',bin:'1044556',loc:'Jabal Akhdar',score:'B',phone:'+96895667788',email:'info@jabalq.om',orders:31,onTime:88,priceVsMkt:6},
+    {id:'S-04',name:'OMAN HEAVY LIFT',bin:'1156677',loc:'Sur',score:'B',phone:'+96894778899',email:'rentals@ohl.om',orders:14,onTime:79,priceVsMkt:9},
+    {id:'S-05',name:'AL ASM NEW',bin:'',loc:'Muscat',score:'D',phone:'+96891000111',email:'',orders:0,onTime:0,priceVsMkt:0,risk:'No trade license verified — approval blocked'}
+  ],
+  offers:[
+    {id:'O-301',supplier:'BRIGHT LIGHT TRADING',item:'Bitumen 60/70 — 100 ton',price:28200,unit:282,valid:'2026-06-05',status:'Active',insight:'-1% vs market'},
+    {id:'O-302',supplier:'OMAN HEAVY LIFT',item:'Crawler Crane 150T — 1 month',price:10900,unit:10900,valid:'2026-06-04',status:'Active',insight:'+12% higher than market average'},
+    {id:'O-303',supplier:'JABAL QUARRIES LLC',item:'Aggregate 20mm — 500 ton',price:2050,unit:4.1,valid:'2026-06-12',status:'Active',insight:'-2% vs market'},
+    {id:'O-304',supplier:'MUSCAT STEEL',item:'Rebar 16mm — 30 ton',price:9150,unit:305,valid:'2026-05-29',status:'Expired',insight:'on market'}
+  ],
+  prs:[
+    {id:'PR-1190',desc:'Bitumen 60/70 — 100 ton for Hadbin Section B',amount:28200,requester:'Eng. Khalid',stage:'Level 3',age:1,created:'2026-06-02'},
+    {id:'PR-1191',desc:'Crawler Crane 150T rental — 1 month',amount:10900,requester:'Eng. Khalid',stage:'Level 2',age:0,created:'2026-06-03'},
+    {id:'PR-1189',desc:'Diesel Fuel top-up — 20,000 L',amount:3920,requester:'Warehouse',stage:'Submitted',age:2,created:'2026-06-01'},
+    {id:'PR-1188',desc:'Aggregate 20mm — 500 ton',amount:2050,requester:'Eng. Noor',stage:'Approved',age:4,created:'2026-05-30'},
+    {id:'PR-1187',desc:'Rebar 16mm — 40 ton',amount:12500,requester:'Eng. Noor',stage:'Rejected',age:5,created:'2026-05-29'}
+  ],
+  activity:[
+    {ico:'✅',color:'green',html:'Purchase Request <b>#1188</b> approved by Finance',time:'Today · 11:30 AM'},
+    {ico:'🏷️',color:'blue',html:'New offer from <b>BRIGHT LIGHT</b> — Bitumen 100 ton',time:'Today · 09:14 AM'},
+    {ico:'📋',color:'amber',html:'<b>Eng. Khalid</b> submitted Purchase Request <b>#1191</b>',time:'Today · 08:02 AM'},
+    {ico:'⚠️',color:'red',html:'Stock alert: <b>Reinforcement Steel 16mm</b> below reorder point',time:'Yesterday · 04:40 PM'},
+    {ico:'🏭',color:'blue',html:'Supplier <b>AL ASM NEW</b> flagged — license verification required',time:'Yesterday · 02:10 PM'}
+  ]
+};
+
+/* ---- helpers ---- */
+/**
+ * Shorthand querySelector.
+ * @param {string} s - CSS selector
+ * @param {Element} [r] - optional root element
+ * @returns {Element|null}
+ */
+function $(s,r){return (r||document).querySelector(s);}
+
+/**
+ * Create a DOM element with optional class and text content.
+ * @param {string} tag - HTML tag name
+ * @param {string} [cls] - CSS class
+ * @param {string} [txt] - text content
+ * @returns {HTMLElement}
+ */
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+
+/**
+ * Format a number as OMR currency string.
+ * @param {number} n - numeric value
+ * @returns {string}
+ */
+function fmtOMR(n){return Number(n).toLocaleString('en-OM',{minimumFractionDigits:0,maximumFractionDigits:3});}
+
+/**
+ * Calculate days until a given date from reference date 2026-06-03.
+ * @param {string} d - ISO date string
+ * @returns {number}
+ */
+function daysUntil(d){return Math.ceil((new Date(d)-new Date('2026-06-03'))/864e5);}
+
+/**
+ * Display a toast notification message.
+ * @param {string} msg - message to display
+ */
+function toast(msg){var w=$('#toastWrap');var t=el('div','toast',msg);w.appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(function(){t.remove();},300);},3500);}
+
+/**
+ * Count purchase requests in pending/active approval stages.
+ * @returns {number}
+ */
+function pendingPRs(){return SEED.prs.filter(function(p){return /Level|Submitted/.test(p.stage);}).length;}
+
+/* ---- theme ---- */
+/**
+ * Apply a named theme (light or dark) to the document root.
+ * @param {string} t - 'light' or 'dark'
+ */
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var b=$('#themeBtn');if(b)b.textContent=t==='dark'?'☀️':'🌙';localStorage.setItem('nexus-theme',t);}
+
+/**
+ * Initialise theme from localStorage or system preference and wire the toggle button.
+ */
+function initTheme(){var saved=localStorage.getItem('nexus-theme');if(!saved){saved=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}applyTheme(saved);var b=$('#themeBtn');if(b)b.onclick=function(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');renderCharts();};}
+
+/* ---- shell rendering (sidebar + bottom nav) ---- */
+/**
+ * Render the sidebar navigation and bottom mobile nav from the NAV model.
+ */
+function renderShell(){
+  var sb=$('#sidebar');
+  var head='<div class="sb-head"><div class="sb-mark">NX</div><div><div class="sb-brand">ERP <span>Nexus</span></div><div class="sb-ver">Procurement · v2.0</div></div></div><nav class="sb-nav">';
+  var body='';
+  NAV.forEach(function(n){
+    if(n.sec){body+='<div class="sb-sec">'+n.sec+'</div>';return;}
+    var badge='';
+    if(n.badge==='pr'&&pendingPRs())badge='<span class="nav-badge">'+pendingPRs()+'</span>';
+    if(n.badge==='notif')badge='<span class="nav-badge">5</span>';
+    body+='<a class="nav-i'+(n.id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label+badge+'</a>';
+  });
+  var foot='</nav><div class="sb-foot"><div class="u-card"><div class="u-av">'+SEED.user.initials+'</div><div style="flex:1;min-width:0"><div class="u-name">'+SEED.user.name+'</div><div class="u-role">'+SEED.user.role+'</div></div><button class="icon-btn" onclick="signOut()" aria-label="Sign out" title="Sign out">⏻</button></div></div>';
+  sb.innerHTML=head+body+foot;
+  var bn=$('#bottomNav');if(bn){var h='';BOTTOM.forEach(function(id){var n=NAV.find(function(x){return x.id===id;});if(!n)return;h+='<a class="bn-i'+(id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label.split(' ')[0]+'</a>';});bn.innerHTML=h;}
+}
+
+/** Sign out: show demo toast. */
+function signOut(){toast('Signed out (demo session)');}
+
+/* ---- global search ---- */
+/**
+ * Build a flat search index from all SEED data collections.
+ * @returns {Array<Object>}
+ */
+function buildSearchIndex(){
+  var ix=[];
+  SEED.materials.forEach(function(m){ix.push({grp:'Materials',ico:'📦',cls:'b-blue',name:m.name,meta:m.cat+' · '+fmtOMR(m.price)+' OMR/'+m.unit,href:'materials.html'});});
+  SEED.suppliers.forEach(function(s){ix.push({grp:'Suppliers',ico:'🏭',cls:'b-green',name:s.name,meta:s.loc+' · Score '+s.score,href:'suppliers.html'});});
+  SEED.offers.forEach(function(o){ix.push({grp:'Offers',ico:'🏷️',cls:'b-amber',name:o.item,meta:o.supplier+' · '+fmtOMR(o.price)+' OMR',href:'offers.html'});});
+  SEED.prs.forEach(function(p){ix.push({grp:'Purchase Requests',ico:'📋',cls:'b-grey',name:p.id+' — '+p.desc,meta:p.stage+' · '+fmtOMR(p.amount)+' OMR',href:'purchaserequests.html'});});
+  return ix;
+}
+
+/**
+ * Initialise global search box: index, input listener, keyboard shortcuts, outside-click close.
+ */
+function initSearch(){
+  var box=$('#globalSearch'),res=$('#searchResults'),ix=buildSearchIndex();
+  function run(q){
+    q=q.trim().toLowerCase();
+    if(!q){res.classList.remove('open');return;}
+    var hits=ix.filter(function(i){return (i.name+' '+i.meta).toLowerCase().indexOf(q)>-1;}).slice(0,12);
+    var groups={};hits.forEach(function(h){(groups[h.grp]=groups[h.grp]||[]).push(h);});
+    var html='';
+    if(q.indexOf('crane')>-1||q.indexOf('150')>-1)html+='<div class="sr-ai">💡 Did you mean: Crawler Crane 150T?</div>';
+    if(!hits.length){html+='<div class="sr-ai">No matches for "'+q+'"</div>';}
+    Object.keys(groups).forEach(function(g){
+      html+='<div class="sr-group">'+g+'</div>';
+      groups[g].forEach(function(h){html+='<a class="sr-i" href="'+h.href+'"><span class="sr-ico badge '+h.cls+'">'+h.ico+'</span><div><div class="sr-name">'+h.name+'</div><div class="sr-meta">'+h.meta+'</div></div></a>';});
+    });
+    res.innerHTML=html;res.classList.add('open');
+  }
+  box.addEventListener('input',function(){run(box.value);});
+  box.addEventListener('focus',function(){if(box.value)run(box.value);});
+  document.addEventListener('click',function(e){if(!e.target.closest('.search-wrap'))res.classList.remove('open');});
+  document.addEventListener('keydown',function(e){
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();box.focus();}
+    if(e.key==='/'&&document.activeElement!==box&&!/input|textarea/i.test(document.activeElement.tagName)){e.preventDefault();box.focus();}
+    if(e.key==='Escape')res.classList.remove('open');
+  });
+}
+
+/* ---- live connection indicator ---- */
+/**
+ * Initialise the live/offline pill indicator and bind online/offline events.
+ */
+function initLive(){
+  function set(on){var p=$('#livePill');if(on){p.classList.remove('offline');p.innerHTML='<span class="live-dot"></span><span>Live</span>';}else{p.classList.add('offline');p.innerHTML='<span class="live-dot"></span><span>Offline</span>';}}
+  window.addEventListener('online',function(){set(true);toast('Reconnected — syncing');});
+  window.addEventListener('offline',function(){set(false);});
+  set(navigator.onLine);
+  if(db){try{db.collection('nexus_meta').doc('heartbeat').onSnapshot(function(){},function(){});}catch(e){}}
+}
+
+/* ============================================================
+   ANALYTICS MODULE — Date range, export, charts, builder
+   ============================================================ */
+
+/** @type {Object.<string,Chart|null>} Holds Chart.js instances keyed by name. */
+var charts={};
+
+/**
+ * Read a CSS custom property value from :root.
+ * @param {string} v - variable name including leading --
+ * @returns {string}
+ */
+function cssVar(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+
+/* ---- Date range presets ---- */
+
+/**
+ * Set the date range inputs to a named preset and update active chip styling.
+ * @param {'month'|'quarter'|'ytd'} preset - preset key
+ */
+function setPreset(preset){
+  var now=new Date('2026-06-03');
+  var from,to;
+  to=fmt(now);
+  if(preset==='month'){
+    from=fmt(new Date(now.getFullYear(),now.getMonth(),1));
+  } else if(preset==='quarter'){
+    var q=Math.floor(now.getMonth()/3);
+    var qStart=new Date(now.getFullYear(),Math.max(0,(q-1)*3),1);
+    var qEnd=new Date(now.getFullYear(),Math.max(0,q*3),0);
+    from=fmt(qStart);
+    to=fmt(qEnd);
+  } else if(preset==='ytd'){
+    from=fmt(new Date(now.getFullYear(),0,1));
+  }
+  $('#dateFrom').value=from;
+  $('#dateTo').value=to;
+  ['month','quarter','ytd'].forEach(function(p){
+    var chip=$('#preset'+p.charAt(0).toUpperCase()+p.slice(1));
+    if(chip){chip.classList.toggle('active',p===preset);}
+  });
+}
+
+/**
+ * Format a Date object as YYYY-MM-DD string for date inputs.
+ * @param {Date} d - date to format
+ * @returns {string}
+ */
+function fmt(d){
+  var y=d.getFullYear();
+  var m=String(d.getMonth()+1).padStart(2,'0');
+  var day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+
+/* ---- Export functions ---- */
+
+/** Trigger browser print dialog (PDF export). */
+function exportPDF(){window.print();}
+
+/**
+ * Build a CSV string from SEED materials spend data.
+ * @returns {string} CSV-formatted string
+ */
+function buildSpendCSV(){
+  var rows=[['Material ID','Name','Category','Unit','Unit Price (OMR)','Stock','Total Value (OMR)','Supplier']];
+  SEED.materials.forEach(function(m){
+    rows.push([m.id,'"'+m.name+'"',m.cat,m.unit,m.price.toFixed(3),m.stock,(m.price*m.stock).toFixed(3),'"'+(m.supplier||'')+'\"']);
+  });
+  return rows.map(function(r){return r.join(',');}).join('\r\n');
+}
+
+/**
+ * Trigger a file download via a Blob URL.
+ * @param {string} content - file content string
+ * @param {string} filename - suggested filename
+ * @param {string} mimeType - MIME type for the blob
+ */
+function triggerDownload(content,filename,mimeType){
+  var blob=new Blob([content],{type:mimeType});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download=filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},200);
+}
+
+/** Export spend data as CSV file download. */
+function exportCSV(){
+  triggerDownload(buildSpendCSV(),'nexus-spend-analysis.csv','text/csv;charset=utf-8;');
+  toast('CSV exported — check your downloads');
+}
+
+/** Export spend data as XLS file download (CSV with .xls extension). */
+function exportExcel(){
+  triggerDownload(buildSpendCSV(),'nexus-spend-analysis.xls','application/vnd.ms-excel');
+  toast('Excel exported — check your downloads');
+}
+
+/* ---- Dashboard builder (show/hide cards) ---- */
+
+/**
+ * Load the card visibility state from localStorage, defaulting all to visible.
+ * @returns {Object.<string,boolean>}
+ */
+function loadBuilderState(){
+  try{
+    var raw=localStorage.getItem('nexus-analytics-builder');
+    if(raw){return JSON.parse(raw);}
+  } catch(e){}
+  return {category:true,trend:true,suppliers:true,price:true,bottleneck:true};
+}
+
+/**
+ * Persist the current card visibility state to localStorage.
+ * @param {Object.<string,boolean>} state - map of card key to visibility
+ */
+function saveBuilderState(state){
+  try{localStorage.setItem('nexus-analytics-builder',JSON.stringify(state));}catch(e){}
+}
+
+/**
+ * Toggle the visibility of a named report card section and persist the state.
+ * @param {string} key - card key (category|trend|suppliers|price|bottleneck)
+ */
+function toggleCard(key){
+  var state=loadBuilderState();
+  state[key]=!state[key];
+  saveBuilderState(state);
+  applyBuilderState(state);
+}
+
+/**
+ * Apply card visibility state to the DOM (show/hide sections, update chip aria).
+ * @param {Object.<string,boolean>} state - map of card key to visibility
+ */
+function applyBuilderState(state){
+  Object.keys(state).forEach(function(key){
+    var section=$('#section-'+key);
+    var chip=$('#chip-'+key);
+    if(section){
+      if(state[key]){section.classList.remove('hidden');}
+      else{section.classList.add('hidden');}
+    }
+    if(chip){
+      chip.classList.toggle('on',!!state[key]);
+      chip.setAttribute('aria-pressed',state[key]?'true':'false');
+    }
+  });
+  updateRowVisibility();
+}
+
+/**
+ * Hide grid rows when all contained report cards are hidden to avoid empty gaps.
+ */
+function updateRowVisibility(){
+  var rows=[
+    {row:'row-cat-trend',keys:['category','trend']},
+    {row:'row-sup-price',keys:['suppliers','price']},
+    {row:'row-bottleneck',keys:['bottleneck']}
+  ];
+  var state=loadBuilderState();
+  rows.forEach(function(r){
+    var rowEl=$('#'+r.row);
+    if(!rowEl)return;
+    var anyVisible=r.keys.some(function(k){return state[k];});
+    if(anyVisible){rowEl.style.display='';}
+    else{rowEl.style.display='none';}
+  });
+}
+
+/* ---- Charts ---- */
+
+/**
+ * Destroy all existing Chart.js instances and re-render all charts using
+ * current theme CSS variables. Mirrors dashboard's renderCharts approach.
+ */
+function renderCharts(){
+  if(typeof Chart==='undefined')return;
+  Object.keys(charts).forEach(function(k){if(charts[k]){charts[k].destroy();charts[k]=null;}});
+
+  var grid=cssVar('--border');
+  var txt=cssVar('--muted');
+  Chart.defaults.font.family="'Inter',sans-serif";
+  Chart.defaults.color=txt;
+
+  renderCategoryChart(grid,txt);
+  renderTrendChart(grid,txt);
+  renderSuppliersChart(grid,txt);
+  renderPriceChart(grid,txt);
+  renderBottleneckChart(grid,txt);
+}
+
+/**
+ * Render the Spend Analysis by Category doughnut chart.
+ * @param {string} grid - grid line colour
+ * @param {string} txt - axis text colour
+ */
+function renderCategoryChart(grid,txt){
+  var canv=$('#chartCategory');
+  if(!canv)return;
+  var byCat={};
+  SEED.materials.forEach(function(m){byCat[m.cat]=(byCat[m.cat]||0)+(m.price*m.stock);});
+  var labels=Object.keys(byCat);
+  var values=Object.values(byCat).map(function(v){return Math.round(v);});
+  charts.category=new Chart(canv,{
+    type:'doughnut',
+    data:{
+      labels:labels,
+      datasets:[{
+        data:values,
+        backgroundColor:['#E8612C','#2D7DD2','#1DB06A','#E8930A','#7C3AED','#E5484D','#F4863F','#5AA0E6'],
+        borderWidth:0
+      }]
+    },
+    options:{
+      cutout:'62%',
+      plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:11},padding:9}}},
+      maintainAspectRatio:false
+    }
+  });
+}
+
+/**
+ * Render the Monthly Spend Trend line chart (12 months, reuses dashboard's dataset).
+ * @param {string} grid - grid line colour
+ * @param {string} txt - axis text colour
+ */
+function renderTrendChart(grid,txt){
+  var canv=$('#chartTrend');
+  if(!canv)return;
+  charts.trend=new Chart(canv,{
+    type:'line',
+    data:{
+      labels:['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'],
+      datasets:[{
+        data:[41,38,52,47,55,49,58,61,53,67,72,64.7],
+        borderColor:'#E8612C',
+        backgroundColor:'rgba(232,97,44,.12)',
+        fill:true,
+        tension:.4,
+        borderWidth:2.5,
+        pointRadius:0,
+        pointHoverRadius:5
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{grid:{color:grid},ticks:{callback:function(v){return v+'K';}}},
+        x:{grid:{display:false}}
+      },
+      maintainAspectRatio:false
+    }
+  });
+}
+
+/**
+ * Render the Supplier Performance Ranking horizontal bar chart (on-time %).
+ * @param {string} grid - grid line colour
+ * @param {string} txt - axis text colour
+ */
+function renderSuppliersChart(grid,txt){
+  var canv=$('#chartSuppliers');
+  if(!canv)return;
+  var sorted=SEED.suppliers.slice().sort(function(a,b){return b.onTime-a.onTime;});
+  var colors=sorted.map(function(s){
+    if(s.onTime>=95)return '#1DB06A';
+    if(s.onTime>=80)return '#2D7DD2';
+    if(s.onTime>0)return '#E8930A';
+    return '#E5484D';
+  });
+  charts.suppliers=new Chart(canv,{
+    type:'bar',
+    data:{
+      labels:sorted.map(function(s){return s.name.split(' ').slice(0,2).join(' ');}),
+      datasets:[{
+        label:'On-Time %',
+        data:sorted.map(function(s){return s.onTime;}),
+        backgroundColor:colors,
+        borderRadius:6,
+        barThickness:22
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:grid},max:100,ticks:{callback:function(v){return v+'%';}}},
+        y:{grid:{display:false}}
+      },
+      maintainAspectRatio:false
+    }
+  });
+}
+
+/**
+ * Render the Bitumen Price Trend volatility line chart.
+ * @param {string} grid - grid line colour
+ * @param {string} txt - axis text colour
+ */
+function renderPriceChart(grid,txt){
+  var canv=$('#chartPrice');
+  if(!canv)return;
+  charts.price=new Chart(canv,{
+    type:'line',
+    data:{
+      labels:['Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'],
+      datasets:[{
+        label:'Bitumen 60/70 (OMR/ton)',
+        data:[272,280,298,289,276,283,291,285],
+        borderColor:'#7C3AED',
+        backgroundColor:'rgba(124,58,237,.1)',
+        fill:true,
+        tension:.3,
+        borderWidth:2.5,
+        pointRadius:4,
+        pointHoverRadius:6,
+        pointBackgroundColor:'#7C3AED'
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{
+          grid:{color:grid},
+          min:260,
+          ticks:{callback:function(v){return v+' OMR';}}
+        },
+        x:{grid:{display:false}}
+      },
+      maintainAspectRatio:false
+    }
+  });
+}
+
+/**
+ * Render the Approval Bottleneck Analysis bar chart.
+ * Highlights the stage with the maximum average days in red.
+ * @param {string} grid - grid line colour
+ * @param {string} txt - axis text colour
+ */
+function renderBottleneckChart(grid,txt){
+  var canv=$('#chartBottleneck');
+  if(!canv)return;
+  var stages=['Submitted','Level 1','Level 2','Level 3'];
+  var days=[0.5,0.8,1.4,2.1];
+  var maxVal=Math.max.apply(null,days);
+  var bgColors=days.map(function(d){
+    if(d===maxVal)return '#E5484D';
+    return '#2D7DD2';
+  });
+  charts.bottleneck=new Chart(canv,{
+    type:'bar',
+    data:{
+      labels:stages,
+      datasets:[{
+        label:'Avg. Days',
+        data:days,
+        backgroundColor:bgColors,
+        borderRadius:8,
+        barThickness:40
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{
+          grid:{color:grid},
+          beginAtZero:true,
+          ticks:{callback:function(v){return v+'d';}}
+        },
+        x:{grid:{display:false}}
+      },
+      maintainAspectRatio:false
+    }
+  });
+}
+
+/* ---- Scheduled Reports ---- */
+
+/**
+ * Handle the schedule form submit: write to Firestore nexus_schedules and toast.
+ * @param {Event} e - form submit event
+ */
+function saveSchedule(e){
+  e.preventDefault();
+  var report=$('#scheduleReport').value;
+  var email=$('#scheduleEmail').value.trim();
+  var day=parseInt($('#scheduleDay').value,10);
+  if(!email){toast('Please enter a valid email address');return;}
+  if(db){
+    try{
+      db.collection('nexus_schedules').add({
+        report:report,
+        email:email,
+        dayOfMonth:day,
+        createdAt:Date.now(),
+        createdBy:SEED.user.name
+      });
+    } catch(err){
+      console.warn('nexus_schedules write error',err);
+    }
+  }
+  toast('Schedule saved — ' + report + ' will be sent to ' + email + ' on the ' + day + ordinal(day) + ' of every month');
+}
+
+/**
+ * Return the ordinal suffix for a day number (1 → st, 2 → nd, 3 → rd, else th).
+ * @param {number} n - day number
+ * @returns {string}
+ */
+function ordinal(n){
+  if(n===1)return 'st';
+  if(n===2)return 'nd';
+  if(n===3)return 'rd';
+  return 'th';
+}
+
+/* ---- Boot ---- */
+/**
+ * Initialise the analytics page: theme, shell, charts, search, live indicator,
+ * date presets, builder state, and resize handler.
+ */
+function boot(){
+  initTheme();
+  renderShell();
+  renderCharts();
+  initSearch();
+  initLive();
+  setPreset('ytd');
+  var state=loadBuilderState();
+  applyBuilderState(state);
+  window.addEventListener('resize',function(){clearTimeout(window._rt);window._rt=setTimeout(renderCharts,200);});
+}
+document.addEventListener('DOMContentLoaded',boot);
+
+/* ---- PWA ---- */
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('nexus-sw.js').catch(function(){});});}
+</script>
+</body>
+</html>

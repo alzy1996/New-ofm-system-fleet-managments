@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ERP Nexus — Notifications</title>
+<meta name="theme-color" content="#E8612C">
+<meta name="description" content="ERP Nexus — Notification & Task Hub">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<link rel="manifest" href="nexus-manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+/* ============================================================
+   ERP NEXUS — SHARED DESIGN SYSTEM (canonical, replicated per module)
+   ============================================================ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --primary:#E8612C;--primary-d:#C44D1E;--primary-l:rgba(232,97,44,.09);
+  --blue:#2D7DD2;--blue-l:rgba(45,125,210,.1);
+  --green:#1DB06A;--amber:#E8930A;--red:#E5484D;--purple:#7C3AED;
+  --bg:#F4F5F9;--surface:#FFFFFF;--surface-2:#FAFBFE;
+  --text:#0F1117;--muted:#7B8299;--border:#E7EAF2;
+  --sh-sm:0 1px 3px rgba(15,17,23,.06);
+  --sh:0 1px 3px rgba(15,17,23,.06),0 6px 18px rgba(15,17,23,.05);
+  --sh-lg:0 20px 40px rgba(15,17,23,.16);
+  --r:12px;--r-sm:8px;--r-lg:16px;
+  --glass:rgba(255,255,255,.72);
+}
+[data-theme="dark"]{
+  --bg:#0E1016;--surface:#171A22;--surface-2:#1E222C;
+  --text:#EEF1F7;--muted:#8A92A6;--border:#272C38;
+  --primary-l:rgba(232,97,44,.16);--blue-l:rgba(45,125,210,.18);
+  --glass:rgba(23,26,34,.72);
+  --sh-sm:0 1px 3px rgba(0,0,0,.4);--sh:0 1px 3px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3);
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;font-size:14px;}
+button{font-family:inherit;cursor:pointer;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+/* ---- App shell ---- */
+.shell{display:flex;height:100vh;height:100dvh;}
+.sb{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;height:100vh;height:100dvh;transition:width .2s;}
+.sb-head{padding:18px 16px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);}
+.sb-mark{width:38px;height:38px;background:linear-gradient(135deg,var(--primary),#F4863F);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:15px;flex-shrink:0;box-shadow:0 4px 12px rgba(232,97,44,.35);}
+.sb-brand{font-size:15px;font-weight:800;letter-spacing:-.3px;}
+.sb-brand span{color:var(--primary);}
+.sb-ver{font-size:10px;color:var(--muted);font-weight:600;}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0;}
+.sb-sec{padding:14px 16px 6px;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase;}
+.nav-i{display:flex;align-items:center;gap:11px;padding:10px 14px;margin:2px 9px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;transition:background .15s,color .15s;}
+.nav-i:hover{background:var(--surface-2);color:var(--text);}
+.nav-i.active{background:var(--primary-l);color:var(--primary);font-weight:700;}
+.nav-ico{font-size:17px;width:20px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:1px 7px;border-radius:9px;}
+.sb-foot{padding:12px;border-top:1px solid var(--border);}
+.u-card{display:flex;align-items:center;gap:10px;}
+.u-av{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue),#5AA0E6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex-shrink:0;}
+.u-name{font-size:12.5px;font-weight:700;}
+.u-role{font-size:10.5px;color:var(--muted);}
+.icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--muted);transition:all .15s;}
+.icon-btn:hover{color:var(--primary);border-color:var(--primary);}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.topbar{background:var(--glass);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:11px 22px;display:flex;align-items:center;gap:16px;flex-shrink:0;z-index:30;}
+.tb-title h1{font-size:17px;font-weight:800;letter-spacing:-.3px;}
+.tb-title p{font-size:11.5px;color:var(--muted);}
+.search-wrap{flex:1;max-width:480px;position:relative;}
+.search-box{width:100%;height:40px;padding:0 14px 0 40px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;}
+.search-box:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);background:var(--surface);}
+.search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none;}
+.search-kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 6px;background:var(--surface);}
+.tb-actions{display:flex;align-items:center;gap:9px;margin-left:auto;}
+.live-pill{display:flex;align-items:center;gap:6px;background:rgba(29,176,106,.1);border:1px solid rgba(29,176,106,.25);color:var(--green);padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
+.live-pill.offline{background:rgba(232,147,10,.1);border-color:rgba(232,147,10,.3);color:var(--amber);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(1.6);}}
+
+.content{flex:1;overflow-y:auto;padding:20px 22px 90px;}
+.page-grid{max-width:1440px;margin:0 auto;}
+
+/* ---- Cards / layout ---- */
+.grid-2{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-bottom:14px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh-sm);}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.card-t{font-size:13.5px;font-weight:800;letter-spacing:-.2px;}
+.card-t small{font-weight:600;color:var(--muted);font-size:11px;margin-left:6px;}
+.link-btn{font-size:11.5px;font-weight:700;color:var(--primary);background:none;border:none;}
+
+/* ---- badges & chips ---- */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:999px;}
+.b-green{background:rgba(29,176,106,.12);color:#0e7a4a;}
+.b-amber{background:rgba(232,147,10,.13);color:#a06003;}
+.b-red{background:rgba(229,72,77,.12);color:#c0292e;}
+.b-blue{background:var(--blue-l);color:#1a5fa0;}
+.b-grey{background:var(--surface-2);color:var(--muted);border:1px solid var(--border);}
+.skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:shimmer 1.3s infinite;border-radius:8px;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+/* ---- Buttons ---- */
+.btn{border:none;border-radius:var(--r-sm);font-weight:700;font-size:12px;padding:8px 14px;transition:filter .15s,background .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-pri{background:var(--primary);color:#fff;}.btn-pri:hover{background:var(--primary-d);}
+.btn-ok{background:var(--green);color:#fff;}.btn-ok:hover{filter:brightness(.93);}
+.btn-no{background:rgba(229,72,77,.12);color:var(--red);}.btn-no:hover{background:rgba(229,72,77,.2);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary);}
+.btn-sm{padding:6px 11px;font-size:11px;}
+.btn-wa{background:rgba(37,211,102,.12);color:#128c3e;border:1px solid rgba(37,211,102,.3);}
+.btn-wa:hover{background:rgba(37,211,102,.22);}
+
+/* ---- Modal ---- */
+.overlay{position:fixed;inset:0;background:rgba(8,10,16,.45);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:120;padding:18px;}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:pop .2s cubic-bezier(.16,1,.3,1);}
+@keyframes pop{from{transform:scale(.95);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal-h{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-t{font-size:15px;font-weight:800;}
+.modal-b{padding:18px;}
+.modal-f{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.fld{margin-bottom:14px;}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.fld input,.fld select,.fld textarea{width:100%;min-height:40px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font-family:inherit;font-size:13px;outline:none;}
+.fld textarea{min-height:84px;resize:vertical;}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);}
+
+/* ---- Mobile bottom nav ---- */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--glass);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:50;justify-content:space-around;}
+.bn-i{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:9.5px;font-weight:700;}
+.bn-i.active{color:var(--primary);}
+.bn-i .nav-ico{font-size:19px;}
+
+/* ---- Search overlay results ---- */
+.search-results{position:absolute;top:46px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--sh-lg);padding:8px;max-height:60vh;overflow-y:auto;display:none;z-index:40;}
+.search-results.open{display:block;}
+.sr-group{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:8px 10px 4px;}
+.sr-i{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;}
+.sr-i:hover{background:var(--surface-2);}
+.sr-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.sr-name{font-size:12.5px;font-weight:600;}.sr-meta{font-size:10.5px;color:var(--muted);}
+.sr-ai{font-size:11.5px;color:var(--primary);font-weight:700;padding:8px 10px;}
+
+.toast-wrap{position:fixed;top:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;padding:12px 14px;box-shadow:var(--sh-lg);font-size:12.5px;font-weight:600;min-width:240px;animation:slideIn .3s ease;}
+@keyframes slideIn{from{transform:translateX(120%);}to{transform:translateX(0);}}
+
+@media(max-width:1100px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+@media(max-width:760px){
+  .sb{display:none;}
+  .bottom-nav{display:flex;}
+  .topbar{padding:10px 14px;}
+  .tb-title{display:none;}
+  .search-kbd{display:none;}
+  .content{padding:14px 14px 90px;}
+  .live-pill span{display:none;}
+}
+
+/* ============================================================
+   MODULE G — Notifications-specific styles
+   ============================================================ */
+
+/* ---- Layout ---- */
+.notif-layout{display:flex;gap:16px;align-items:flex-start;}
+.notif-rail{width:200px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh-sm);position:sticky;top:0;}
+.notif-main{flex:1;min-width:0;}
+
+/* ---- Category rail ---- */
+.rail-title{padding:14px 14px 8px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;}
+.rail-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .12s,color .12s;font-size:13px;font-weight:600;color:var(--muted);border-left:3px solid transparent;}
+.rail-item:hover{background:var(--surface-2);color:var(--text);}
+.rail-item.active{background:var(--primary-l);color:var(--primary);border-left-color:var(--primary);font-weight:700;}
+.rail-ico{font-size:16px;width:20px;text-align:center;}
+.rail-count{margin-left:auto;font-size:10px;font-weight:800;background:var(--red);color:#fff;padding:1px 6px;border-radius:9px;min-width:20px;text-align:center;}
+.rail-count.zero{background:var(--surface-2);color:var(--muted);border:1px solid var(--border);}
+
+/* ---- Notification header bar ---- */
+.notif-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.notif-header-title{font-size:16px;font-weight:800;flex:1;}
+.unread-badge{display:inline-flex;align-items:center;gap:5px;background:var(--red);color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;}
+
+/* ---- Notification rows ---- */
+.notif-list{display:flex;flex-direction:column;gap:8px;}
+.notif-row-wrap{overflow:hidden;border-radius:var(--r);position:relative;}
+.notif-action-bg{position:absolute;inset:0;border-radius:var(--r);display:flex;align-items:center;pointer-events:none;}
+.notif-action-bg-approve{background:var(--green);justify-content:flex-start;padding-left:20px;color:#fff;font-size:13px;font-weight:800;opacity:0;transition:opacity .15s;}
+.notif-action-bg-dismiss{background:var(--red);justify-content:flex-end;padding-right:20px;color:#fff;font-size:13px;font-weight:800;opacity:0;transition:opacity .15s;}
+.notif-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;box-shadow:var(--sh-sm);display:flex;align-items:flex-start;gap:12px;transition:border-color .15s,transform .08s;position:relative;z-index:1;cursor:default;touch-action:pan-y;}
+.notif-row.unread{border-left:3px solid var(--primary);}
+.notif-row.resolved{opacity:.55;}
+.notif-row:hover{border-color:var(--primary);}
+
+/* Priority dot */
+.priority-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.dot-high{background:var(--red);}
+.dot-medium{background:var(--amber);}
+.dot-low{background:var(--muted);}
+
+/* Category icon */
+.cat-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.cat-approvals{background:var(--primary-l);color:var(--primary);}
+.cat-offers{background:var(--blue-l);color:var(--blue);}
+.cat-system{background:rgba(124,58,237,.12);color:var(--purple);}
+.cat-alerts{background:rgba(229,72,77,.12);color:var(--red);}
+
+/* Row body */
+.notif-body{flex:1;min-width:0;}
+.notif-title{font-size:13px;font-weight:700;line-height:1.3;margin-bottom:3px;}
+.notif-text{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px;}
+.notif-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.notif-time{font-size:10.5px;color:var(--muted);}
+.unread-dot{width:7px;height:7px;border-radius:50%;background:var(--primary);flex-shrink:0;}
+
+/* Row actions */
+.notif-actions{display:flex;gap:5px;align-items:center;flex-shrink:0;}
+
+/* ---- Swipe hint ---- */
+.swipe-hint{font-size:11px;color:var(--muted);text-align:center;padding:8px 0 4px;display:flex;align-items:center;justify-content:center;gap:6px;}
+
+/* ---- Email digest card ---- */
+.digest-card{background:linear-gradient(135deg,var(--primary-l),var(--blue-l));border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px;}
+.digest-title{font-size:13px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.digest-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);}
+.digest-row:last-child{border-bottom:none;}
+.digest-label{font-size:12px;color:var(--muted);}
+.digest-val{font-size:12px;font-weight:700;}
+
+/* ---- Settings toggles ---- */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+.toggle-row:last-child{border-bottom:none;}
+.toggle-label{font-size:13px;font-weight:600;}
+.toggle-desc{font-size:11px;color:var(--muted);margin-top:2px;}
+.toggle{position:relative;width:42px;height:24px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:12px;transition:background .2s;cursor:pointer;}
+.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;}
+.toggle input:checked + .toggle-slider{background:var(--green);}
+.toggle input:checked + .toggle-slider::before{transform:translateX(18px);}
+
+/* Empty state */
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted);}
+.empty-state .es-ico{font-size:40px;margin-bottom:12px;}
+.empty-state p{font-size:13px;}
+
+@media(max-width:900px){
+  .notif-layout{flex-direction:column;}
+  .notif-rail{width:100%;position:static;}
+  .rail-items-wrap{display:flex;flex-wrap:wrap;padding:0 8px 8px;gap:6px;}
+  .rail-item{padding:7px 12px;border-left:none;border-radius:20px;font-size:11px;}
+  .rail-item.active{background:var(--primary);color:#fff;border-left:none;}
+  .rail-title{display:none;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- ================= SIDEBAR (shared shell) ================= -->
+  <aside class="sb" id="sidebar"></aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="tb-title">
+        <h1>Notifications</h1>
+        <p>Command center</p>
+      </div>
+      <div class="search-wrap">
+        <span class="search-ico" aria-hidden="true">🔍</span>
+        <input class="search-box" id="globalSearch" placeholder="Search materials, suppliers, offers, requests…" aria-label="Global search" autocomplete="off">
+        <span class="search-kbd">Ctrl K</span>
+        <div class="search-results" id="searchResults" role="listbox"></div>
+      </div>
+      <div class="tb-actions">
+        <div class="live-pill" id="livePill"><span class="live-dot"></span><span>Live</span></div>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">🌙</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-grid">
+
+        <!-- Email Digest Preview Card -->
+        <div class="digest-card" aria-label="Email digest preview" id="digestCard"></div>
+
+        <!-- Main layout: rail + list -->
+        <div class="notif-layout">
+
+          <!-- Left Category Rail -->
+          <nav class="notif-rail" aria-label="Notification categories">
+            <div class="rail-title">Categories</div>
+            <div id="railItems"></div>
+          </nav>
+
+          <!-- Notification main pane -->
+          <section class="notif-main" aria-label="Notification inbox">
+            <div class="notif-header">
+              <span class="notif-header-title">Priority Inbox</span>
+              <span class="unread-badge" id="unreadBadge" aria-live="polite">0 unread</span>
+              <button class="btn btn-ghost btn-sm" onclick="markAllRead()" aria-label="Mark all notifications as read">✓ Mark all read</button>
+              <button class="btn btn-ghost btn-sm" onclick="openModal('settingsModal')" aria-label="Open notification settings">⚙️ Settings</button>
+            </div>
+            <div class="swipe-hint" aria-hidden="true">
+              <span>← Dismiss</span>
+              <span style="color:var(--border)">|</span>
+              <span>Approve →</span>
+              <span style="font-size:10px">(swipe on mobile)</span>
+            </div>
+            <div class="notif-list" id="notifList" role="list" aria-label="Notification items"></div>
+          </section>
+
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<nav class="bottom-nav" id="bottomNav" aria-label="Primary navigation"></nav>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ================= SETTINGS MODAL ================= -->
+<div class="overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+  <div class="modal">
+    <div class="modal-h">
+      <div class="modal-t" id="settingsModalTitle">Notification Settings</div>
+      <button class="icon-btn" onclick="closeModal('settingsModal')" aria-label="Close settings">✕</button>
+    </div>
+    <div class="modal-b">
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Manage how you receive procurement alerts and digests.</p>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Email Digest (Daily Summary)</div>
+          <div class="toggle-desc">Receive a daily 08:00 AM summary of pending items</div>
+        </div>
+        <label class="toggle" aria-label="Toggle email digest">
+          <input type="checkbox" id="togEmail" onchange="saveSettings()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Sound on High-Priority</div>
+          <div class="toggle-desc">Play an alert sound for High-priority notifications</div>
+        </div>
+        <label class="toggle" aria-label="Toggle sound on high priority">
+          <input type="checkbox" id="togSound" onchange="saveSettings()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Push Notifications</div>
+          <div class="toggle-desc">Browser push notifications for approvals and alerts</div>
+        </div>
+        <label class="toggle" aria-label="Toggle push notifications">
+          <input type="checkbox" id="togPush" onchange="saveSettings()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('settingsModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   ERP NEXUS — shared runtime (firebase, shell, seed, helpers)
+   ============================================================ */
+
+/* ---- Firebase (shared project) ---- */
+var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
+var db=null;
+try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){console.warn('firebase init',e);}
+
+/* ---- Navigation model (shared across all modules) ---- */
+var NAV=[
+  {sec:'Overview'},
+  {id:'dashboard',label:'Command Center',ico:'◈',href:'dashboard.html'},
+  {id:'analytics',label:'Analytics',ico:'📊',href:'analytics.html'},
+  {sec:'Procurement'},
+  {id:'materials',label:'Materials',ico:'📦',href:'materials.html'},
+  {id:'suppliers',label:'Suppliers',ico:'🏭',href:'suppliers.html'},
+  {id:'offers',label:'Offers',ico:'🏷️',href:'offers.html'},
+  {id:'purchaserequests',label:'Purchase Requests',ico:'📋',href:'purchaserequests.html',badge:'pr'},
+  {sec:'Workspace'},
+  {id:'notifications',label:'Notifications',ico:'🔔',href:'notifications.html',badge:'notif'},
+  {id:'settings',label:'Settings',ico:'⚙️',href:'settings.html'}
+];
+var BOTTOM=['dashboard','materials','purchaserequests','suppliers','notifications'];
+var CURRENT='notifications';
+
+/* ---- Realistic Omani construction seed data ---- */
+var SEED={
+  meta:{project:'Hadbin Road & Infrastructure',currency:'OMR'},
+  user:{name:'Salim Al-Harthy',role:'Procurement Officer',initials:'SH'},
+  materials:[
+    {id:'M-1001',name:'Bitumen 60/70 Penetration Grade',cat:'Bitumen',unit:'ton',price:285.0,date:'2026-05-22',stock:42,reorder:60,supplier:'BRIGHT LIGHT TRADING',tag:'Critical'},
+    {id:'M-1002',name:'Diesel Fuel (Gas Oil)',cat:'Fuel',unit:'liter',price:0.196,date:'2026-05-30',stock:18500,reorder:20000,supplier:'AL MAHA PETROLEUM',tag:'Fast Moving'},
+    {id:'M-1003',name:'Aggregate Stone 20mm',cat:'Stone',unit:'ton',price:4.2,date:'2026-05-18',stock:980,reorder:500,supplier:'JABAL QUARRIES LLC',tag:'Fast Moving'},
+    {id:'M-1004',name:'Crawler Crane 150T (Rental/Month)',cat:'Equipment',unit:'month',price:9800.0,date:'2026-04-11',stock:1,reorder:1,supplier:'OMAN HEAVY LIFT',tag:'Seasonal'},
+    {id:'M-1005',name:'Reinforcement Steel Bar 16mm',cat:'Steel',unit:'ton',price:312.5,date:'2026-05-27',stock:28,reorder:40,supplier:'MUSCAT STEEL',tag:'Critical'},
+    {id:'M-1006',name:'Portland Cement OPC 42.5N',cat:'Cement',unit:'bag',price:1.65,date:'2026-05-29',stock:3400,reorder:2000,supplier:'OMAN CEMENT CO',tag:'Fast Moving'},
+    {id:'M-1007',name:'Sub-base Material 0-40mm',cat:'Stone',unit:'ton',price:3.1,date:'2026-05-15',stock:1420,reorder:800},
+    {id:'M-1008',name:'MC-30 Prime Coat Emulsion',cat:'Bitumen',unit:'liter',price:0.42,date:'2026-05-20',stock:6200,reorder:5000,tag:'New'}
+  ],
+  suppliers:[
+    {id:'S-01',name:'BRIGHT LIGHT TRADING',bin:'1029384',loc:'Muscat',score:'A',phone:'+96899112233',email:'sales@brightlight.om',orders:48,onTime:96,priceVsMkt:-4},
+    {id:'S-02',name:'AL MAHA PETROLEUM',bin:'1182736',loc:'Muscat',score:'A',phone:'+96892334455',email:'b2b@almaha.om',orders:120,onTime:99,priceVsMkt:0},
+    {id:'S-03',name:'JABAL QUARRIES LLC',bin:'1044556',loc:'Jabal Akhdar',score:'B',phone:'+96895667788',email:'info@jabalq.om',orders:31,onTime:88,priceVsMkt:6},
+    {id:'S-04',name:'OMAN HEAVY LIFT',bin:'1156677',loc:'Sur',score:'B',phone:'+96894778899',email:'rentals@ohl.om',orders:14,onTime:79,priceVsMkt:9},
+    {id:'S-05',name:'AL ASM NEW',bin:'',loc:'Muscat',score:'D',phone:'+96891000111',email:'',orders:0,onTime:0,priceVsMkt:0,risk:'No trade license verified — approval blocked'}
+  ],
+  offers:[
+    {id:'O-301',supplier:'BRIGHT LIGHT TRADING',item:'Bitumen 60/70 — 100 ton',price:28200,unit:282,valid:'2026-06-05',status:'Active',insight:'-1% vs market'},
+    {id:'O-302',supplier:'OMAN HEAVY LIFT',item:'Crawler Crane 150T — 1 month',price:10900,unit:10900,valid:'2026-06-04',status:'Active',insight:'+12% higher than market average'},
+    {id:'O-303',supplier:'JABAL QUARRIES LLC',item:'Aggregate 20mm — 500 ton',price:2050,unit:4.1,valid:'2026-06-12',status:'Active',insight:'-2% vs market'},
+    {id:'O-304',supplier:'MUSCAT STEEL',item:'Rebar 16mm — 30 ton',price:9150,unit:305,valid:'2026-05-29',status:'Expired',insight:'on market'}
+  ],
+  prs:[
+    {id:'PR-1190',desc:'Bitumen 60/70 — 100 ton for Hadbin Section B',amount:28200,requester:'Eng. Khalid',stage:'Level 3',age:1,created:'2026-06-02'},
+    {id:'PR-1191',desc:'Crawler Crane 150T rental — 1 month',amount:10900,requester:'Eng. Khalid',stage:'Level 2',age:0,created:'2026-06-03'},
+    {id:'PR-1189',desc:'Diesel Fuel top-up — 20,000 L',amount:3920,requester:'Warehouse',stage:'Submitted',age:2,created:'2026-06-01'},
+    {id:'PR-1188',desc:'Aggregate 20mm — 500 ton',amount:2050,requester:'Eng. Noor',stage:'Approved',age:4,created:'2026-05-30'},
+    {id:'PR-1187',desc:'Rebar 16mm — 40 ton',amount:12500,requester:'Eng. Noor',stage:'Rejected',age:5,created:'2026-05-29'}
+  ]
+};
+
+/* ---- helpers ---- */
+/**
+ * Shorthand querySelector helper.
+ * @param {string} s - CSS selector
+ * @param {Element|Document} [r] - root element
+ * @returns {Element|null}
+ */
+function $(s,r){return (r||document).querySelector(s);}
+
+/**
+ * Create a DOM element with optional class and text.
+ * @param {string} tag
+ * @param {string} [cls]
+ * @param {string} [txt]
+ * @returns {HTMLElement}
+ */
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+
+/**
+ * Format a number as Omani Rial.
+ * @param {number} n
+ * @returns {string}
+ */
+function fmtOMR(n){return Number(n).toLocaleString('en-OM',{minimumFractionDigits:0,maximumFractionDigits:3});}
+
+/**
+ * Show a toast notification.
+ * @param {string} msg
+ */
+function toast(msg){var w=$('#toastWrap');var t=el('div','toast');t.textContent=msg;w.appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(function(){t.remove();},300);},3500);}
+
+/**
+ * Count pending purchase requests.
+ * @returns {number}
+ */
+function pendingPRs(){return SEED.prs.filter(function(p){return /Level|Submitted/.test(p.stage);}).length;}
+
+/* ---- theme ---- */
+/**
+ * Apply a colour theme to the document root.
+ * @param {string} t - 'dark' or 'light'
+ */
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var b=$('#themeBtn');if(b)b.textContent=t==='dark'?'☀️':'🌙';localStorage.setItem('nexus-theme',t);}
+
+/**
+ * Initialise theme from localStorage or system preference.
+ */
+function initTheme(){var saved=localStorage.getItem('nexus-theme');if(!saved){saved=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}applyTheme(saved);var b=$('#themeBtn');if(b)b.onclick=function(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');};}
+
+/* ---- shell rendering (sidebar + bottom nav) ---- */
+/**
+ * Render the sidebar and bottom navigation from the NAV model.
+ */
+function renderShell(){
+  var sb=$('#sidebar');
+  var head='<div class="sb-head"><div class="sb-mark">NX</div><div><div class="sb-brand">ERP <span>Nexus</span></div><div class="sb-ver">Procurement · v2.0</div></div></div><nav class="sb-nav">';
+  var body='';
+  NAV.forEach(function(n){
+    if(n.sec){body+='<div class="sb-sec">'+n.sec+'</div>';return;}
+    var badge='';
+    if(n.badge==='pr'&&pendingPRs())badge='<span class="nav-badge">'+pendingPRs()+'</span>';
+    if(n.badge==='notif'){var uc=countUnread();if(uc)badge='<span class="nav-badge">'+uc+'</span>';}
+    body+='<a class="nav-i'+(n.id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label+badge+'</a>';
+  });
+  var foot='</nav><div class="sb-foot"><div class="u-card"><div class="u-av">'+SEED.user.initials+'</div><div style="flex:1;min-width:0"><div class="u-name">'+SEED.user.name+'</div><div class="u-role">'+SEED.user.role+'</div></div><button class="icon-btn" onclick="signOut()" aria-label="Sign out" title="Sign out">⏻</button></div></div>';
+  sb.innerHTML=head+body+foot;
+  var bn=$('#bottomNav');if(bn){var h='';BOTTOM.forEach(function(id){var n=NAV.find(function(x){return x.id===id;});if(!n)return;h+='<a class="bn-i'+(id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label.split(' ')[0]+'</a>';});bn.innerHTML=h;}
+}
+
+/**
+ * Demo sign-out action.
+ */
+function signOut(){toast('Signed out (demo session)');}
+
+/* ---- global search ---- */
+/**
+ * Build the full search index from seed data.
+ * @returns {Array<Object>}
+ */
+function buildSearchIndex(){
+  var ix=[];
+  SEED.materials.forEach(function(m){ix.push({grp:'Materials',ico:'📦',cls:'b-blue',name:m.name,meta:m.cat+' · '+fmtOMR(m.price)+' OMR/'+m.unit,href:'materials.html'});});
+  SEED.suppliers.forEach(function(s){ix.push({grp:'Suppliers',ico:'🏭',cls:'b-green',name:s.name,meta:s.loc+' · Score '+s.score,href:'suppliers.html'});});
+  SEED.offers.forEach(function(o){ix.push({grp:'Offers',ico:'🏷️',cls:'b-amber',name:o.item,meta:o.supplier+' · '+fmtOMR(o.price)+' OMR',href:'offers.html'});});
+  SEED.prs.forEach(function(p){ix.push({grp:'Purchase Requests',ico:'📋',cls:'b-grey',name:p.id+' — '+p.desc,meta:p.stage+' · '+fmtOMR(p.amount)+' OMR',href:'purchaserequests.html'});});
+  return ix;
+}
+
+/**
+ * Wire up the topbar global search box.
+ */
+function initSearch(){
+  var box=$('#globalSearch'),res=$('#searchResults'),ix=buildSearchIndex();
+  function run(q){
+    q=q.trim().toLowerCase();
+    if(!q){res.classList.remove('open');return;}
+    var hits=ix.filter(function(i){return (i.name+' '+i.meta).toLowerCase().indexOf(q)>-1;}).slice(0,12);
+    var groups={};hits.forEach(function(h){(groups[h.grp]=groups[h.grp]||[]).push(h);});
+    var html='';
+    if(q.indexOf('crane')>-1||q.indexOf('150')>-1)html+='<div class="sr-ai">💡 Did you mean: Crawler Crane 150T?</div>';
+    if(!hits.length){html+='<div class="sr-ai">No matches for "'+q+'"</div>';}
+    Object.keys(groups).forEach(function(g){
+      html+='<div class="sr-group">'+g+'</div>';
+      groups[g].forEach(function(h){html+='<a class="sr-i" href="'+h.href+'"><span class="sr-ico badge '+h.cls+'">'+h.ico+'</span><div><div class="sr-name">'+h.name+'</div><div class="sr-meta">'+h.meta+'</div></div></a>';});
+    });
+    res.innerHTML=html;res.classList.add('open');
+  }
+  box.addEventListener('input',function(){run(box.value);});
+  box.addEventListener('focus',function(){if(box.value)run(box.value);});
+  document.addEventListener('click',function(e){if(!e.target.closest('.search-wrap'))res.classList.remove('open');});
+  document.addEventListener('keydown',function(e){
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();box.focus();}
+    if(e.key==='/'&&document.activeElement!==box&&!/input|textarea/i.test(document.activeElement.tagName)){e.preventDefault();box.focus();}
+    if(e.key==='Escape')res.classList.remove('open');
+  });
+}
+
+/* ---- live connection indicator ---- */
+/**
+ * Initialise live / offline indicator pill.
+ */
+function initLive(){
+  function set(on){var p=$('#livePill');if(on){p.classList.remove('offline');p.innerHTML='<span class="live-dot"></span><span>Live</span>';}else{p.classList.add('offline');p.innerHTML='<span class="live-dot"></span><span>Offline</span>';}}
+  window.addEventListener('online',function(){set(true);toast('Reconnected — syncing');});
+  window.addEventListener('offline',function(){set(false);});
+  set(navigator.onLine);
+  if(db){try{db.collection('nexus_meta').doc('heartbeat').onSnapshot(function(){},function(){});}catch(e){}}
+}
+
+/* ---- Modal helpers ---- */
+/**
+ * Open a named overlay/modal.
+ * @param {string} id - element ID
+ */
+function openModal(id){$('#'+id).classList.add('open');}
+
+/**
+ * Close a named overlay/modal.
+ * @param {string} id - element ID
+ */
+function closeModal(id){$('#'+id).classList.remove('open');}
+
+document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(function(o){o.classList.remove('open');});});
+document.addEventListener('click',function(e){if(e.target.classList.contains('overlay'))e.target.classList.remove('open');});
+
+/* ============================================================
+   MODULE G — Notifications data & logic
+   ============================================================ */
+
+/** Realistic Omani construction procurement notifications dataset */
+var NOTIFICATIONS=[
+  {id:'N-001',category:'Approvals',priority:'High',title:'PR-1190 awaiting your Level 3 approval',body:'Bitumen 60/70 — 100 ton for Hadbin Section B. Amount: 28,200 OMR. Submitted by Eng. Khalid. Pending for 1 day.',time:'1h ago',read:false,resolved:false,supplierPhone:'96899112233',supplierName:'BRIGHT LIGHT TRADING'},
+  {id:'N-002',category:'Approvals',priority:'High',title:'PR-1191 at Level 2 — Finance sign-off required',body:'Crawler Crane 150T rental — 1 month. Amount: 10,900 OMR. Requested today by Eng. Khalid.',time:'3h ago',read:false,resolved:false,supplierPhone:'96894778899',supplierName:'OMAN HEAVY LIFT'},
+  {id:'N-003',category:'Alerts',priority:'High',title:'Reinforcement Steel 16mm below reorder point',body:'Current stock: 28 ton. Reorder level: 40 ton. Shortfall of 12 ton. Immediate procurement action recommended.',time:'4h ago',read:false,resolved:false,supplierPhone:'96891234567',supplierName:'MUSCAT STEEL'},
+  {id:'N-004',category:'Alerts',priority:'High',title:'AL ASM NEW license verification required',body:'Supplier AL ASM NEW (S-05) has no verified trade license on file. All purchase orders to this vendor are blocked pending compliance review.',time:'5h ago',read:false,resolved:false,supplierPhone:'96891000111',supplierName:'AL ASM NEW'},
+  {id:'N-005',category:'Offers',priority:'High',title:'Offer O-302 from OMAN HEAVY LIFT expires tomorrow',body:'Crawler Crane 150T — 1 month at 10,900 OMR (+12% vs market). Expiry: 4 June 2026. Review and accept or reject before expiry.',time:'6h ago',read:false,resolved:false,supplierPhone:'96894778899',supplierName:'OMAN HEAVY LIFT'},
+  {id:'N-006',category:'Offers',priority:'Medium',title:'Offer O-301 from BRIGHT LIGHT expires in 2 days',body:'Bitumen 60/70 — 100 ton at 28,200 OMR (282 OMR/ton, -1% vs market). Valid until 5 June 2026. Price is competitive.',time:'8h ago',read:false,resolved:false,supplierPhone:'96899112233',supplierName:'BRIGHT LIGHT TRADING'},
+  {id:'N-007',category:'Approvals',priority:'Medium',title:'PR-1189 Diesel Fuel top-up pending Level 1',body:'Diesel Fuel 20,000 L — 3,920 OMR submitted by Warehouse team. Awaiting Level 1 manager review. Age: 2 days.',time:'Yesterday 4:40 PM',read:false,resolved:false,supplierPhone:'96892334455',supplierName:'AL MAHA PETROLEUM'},
+  {id:'N-008',category:'System',priority:'Medium',title:'Monthly spend threshold 80% reached',body:'June 2026 procurement spend has reached 51,776 OMR — 80% of the 64,720 OMR monthly budget. Review upcoming PRs to stay on track.',time:'Yesterday 2:00 PM',read:true,resolved:false,supplierPhone:null,supplierName:null},
+  {id:'N-009',category:'Alerts',priority:'Medium',title:'Bitumen 60/70 stock critical — 42 ton remaining',body:'Current stock 42 ton against reorder level of 60 ton. Active offer from BRIGHT LIGHT TRADING available. Consider creating a purchase order.',time:'Yesterday 11:00 AM',read:true,resolved:false,supplierPhone:'96899112233',supplierName:'BRIGHT LIGHT TRADING'},
+  {id:'N-010',category:'System',priority:'Low',title:'Diesel Fuel stock approaching reorder level',body:'Diesel Fuel (Gas Oil) stock at 18,500 L. Reorder level is 20,000 L. No active offers on file. Request a quote from AL MAHA PETROLEUM.',time:'Yesterday 09:30 AM',read:true,resolved:false,supplierPhone:'96892334455',supplierName:'AL MAHA PETROLEUM'},
+  {id:'N-011',category:'Offers',priority:'Low',title:'Offer O-303 from JABAL QUARRIES — Aggregate 20mm',body:'500 ton at 2,050 OMR (4.1 OMR/ton, -2% vs market). Valid until 12 June 2026. PR-1188 for the same material was recently approved.',time:'2 days ago',read:true,resolved:false,supplierPhone:'96895667788',supplierName:'JABAL QUARRIES LLC'},
+  {id:'N-012',category:'System',priority:'Low',title:'System backup completed — Firestore sync successful',body:'All procurement records and offer data synced at 02:00 AM. No conflicts detected. 2,068 materials catalogue entries verified.',time:'3 days ago',read:true,resolved:false,supplierPhone:null,supplierName:null}
+];
+
+/** Category definitions for the rail */
+var CATEGORIES=[
+  {id:'All',label:'All',ico:'🔔'},
+  {id:'Approvals',label:'Approvals',ico:'📋'},
+  {id:'Offers',label:'Offers',ico:'🏷️'},
+  {id:'Alerts',label:'Alerts',ico:'⚠️'},
+  {id:'System',label:'System',ico:'⚙️'}
+];
+
+/** Currently active category filter */
+var activeCategory='All';
+
+/**
+ * Count unread notifications (not resolved).
+ * @returns {number}
+ */
+function countUnread(){
+  return NOTIFICATIONS.filter(function(n){return !n.read && !n.resolved;}).length;
+}
+
+/**
+ * Count unread notifications for a specific category (or All).
+ * @param {string} cat
+ * @returns {number}
+ */
+function countUnreadCat(cat){
+  return NOTIFICATIONS.filter(function(n){
+    if(n.read || n.resolved)return false;
+    return cat==='All' ? true : n.category===cat;
+  }).length;
+}
+
+/**
+ * Get the CSS class for a priority dot.
+ * @param {string} priority
+ * @returns {string}
+ */
+function priorityDotClass(priority){
+  if(priority==='High')return 'dot-high';
+  if(priority==='Medium')return 'dot-medium';
+  return 'dot-low';
+}
+
+/**
+ * Get the CSS class for a category icon.
+ * @param {string} category
+ * @returns {string}
+ */
+function categoryIconClass(category){
+  if(category==='Approvals')return 'cat-approvals';
+  if(category==='Offers')return 'cat-offers';
+  if(category==='System')return 'cat-system';
+  return 'cat-alerts';
+}
+
+/**
+ * Get the emoji icon for a category.
+ * @param {string} category
+ * @returns {string}
+ */
+function categoryEmoji(category){
+  if(category==='Approvals')return '📋';
+  if(category==='Offers')return '🏷️';
+  if(category==='System')return '⚙️';
+  return '⚠️';
+}
+
+/**
+ * Get sorted notifications for the current filter (High first, then Medium, then Low; resolved last).
+ * @returns {Array<Object>}
+ */
+function getFilteredSorted(){
+  var priorityOrder={High:0,Medium:1,Low:2};
+  return NOTIFICATIONS.filter(function(n){
+    if(n.resolved)return false;
+    return activeCategory==='All' ? true : n.category===activeCategory;
+  }).sort(function(a,b){
+    return priorityOrder[a.priority] - priorityOrder[b.priority];
+  });
+}
+
+/**
+ * Render the left category filter rail.
+ */
+function renderRail(){
+  var wrap=$('#railItems');
+  var html='';
+  CATEGORIES.forEach(function(cat){
+    var uc=countUnreadCat(cat.id);
+    var countHtml=uc
+      ? '<span class="rail-count">'+uc+'</span>'
+      : '<span class="rail-count zero">'+NOTIFICATIONS.filter(function(n){return !n.resolved&&(cat.id==='All'||n.category===cat.id);}).length+'</span>';
+    html+='<div class="rail-item'+(activeCategory===cat.id?' active':'')+'" role="button" tabindex="0" aria-label="Filter '+cat.label+' notifications" onclick="setCategory(\''+cat.id+'\')"><span class="rail-ico">'+cat.ico+'</span><span>'+cat.label+'</span>'+countHtml+'</div>';
+  });
+  wrap.innerHTML=html;
+}
+
+/**
+ * Set the active category filter and re-render.
+ * @param {string} cat
+ */
+function setCategory(cat){
+  activeCategory=cat;
+  renderRail();
+  renderNotifList();
+}
+
+/**
+ * Update the unread badge count in the header.
+ */
+function updateUnreadBadge(){
+  var badge=$('#unreadBadge');
+  var uc=countUnread();
+  badge.textContent=uc+(uc===1?' unread':' unread');
+}
+
+/**
+ * Mark all visible (non-resolved) notifications as read.
+ */
+function markAllRead(){
+  NOTIFICATIONS.forEach(function(n){if(!n.resolved)n.read=true;});
+  renderRail();
+  renderNotifList();
+  updateUnreadBadge();
+  renderShell();
+  toast('All notifications marked as read');
+}
+
+/**
+ * Mark a single notification as read.
+ * @param {string} id
+ */
+function markRead(id){
+  var n=NOTIFICATIONS.find(function(x){return x.id===id;});
+  if(n){n.read=true;}
+  renderRail();
+  renderNotifList();
+  updateUnreadBadge();
+  renderShell();
+}
+
+/**
+ * Approve a notification item (e.g. approve a PR), mark as resolved.
+ * @param {string} id
+ */
+function approveNotif(id){
+  var n=NOTIFICATIONS.find(function(x){return x.id===id;});
+  if(!n)return;
+  n.resolved=true;
+  n.read=true;
+  if(db){
+    try{
+      db.collection('nexus_activity').add({action:'notif_approved',ref:id,title:n.title,at:Date.now(),by:SEED.user.name});
+    }catch(e){}
+  }
+  toast('Approved: '+n.title);
+  renderRail();
+  renderNotifList();
+  updateUnreadBadge();
+  renderShell();
+}
+
+/**
+ * Dismiss a notification item (remove from list).
+ * @param {string} id
+ */
+function dismissNotif(id){
+  var n=NOTIFICATIONS.find(function(x){return x.id===id;});
+  if(!n)return;
+  n.resolved=true;
+  n.read=true;
+  toast('Dismissed');
+  renderRail();
+  renderNotifList();
+  updateUnreadBadge();
+  renderShell();
+}
+
+/**
+ * Send a WhatsApp reminder to a supplier.
+ * Mandatory: write token to Firestore nexus_whatsapp_tokens first,
+ * then open WhatsApp link.
+ * @param {string} phone - phone number without leading +
+ * @param {string} supplierName
+ * @param {string} context - short context string (notification title)
+ */
+function sendWhatsApp(phone,supplierName,context){
+  var msg='Dear '+supplierName+', this is a reminder from ERP Nexus (Hadbin Road & Infrastructure Project): '+context+'. Please respond at your earliest convenience. Thank you — Salim Al-Harthy, Procurement Officer.';
+  var tokenData={to:phone,message:msg,at:Date.now(),by:SEED.user.name,project:SEED.meta.project};
+  if(db){
+    try{
+      db.collection('nexus_whatsapp_tokens').add(tokenData).then(function(){
+        toast('WhatsApp token saved. Opening WhatsApp…');
+        window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');
+      }).catch(function(err){
+        toast('Token save failed — opening WhatsApp anyway');
+        window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');
+        console.warn('whatsapp token write error',err);
+      });
+    }catch(e){
+      toast('Opening WhatsApp (offline mode)');
+      window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');
+    }
+  }else{
+    toast('Opening WhatsApp (no Firestore connection)');
+    window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');
+  }
+}
+
+/**
+ * Render a single notification row element including swipe and action buttons.
+ * @param {Object} n - notification object
+ * @returns {HTMLElement}
+ */
+function buildNotifRow(n){
+  var wrap=document.createElement('div');
+  wrap.className='notif-row-wrap';
+  wrap.setAttribute('data-id',n.id);
+
+  /* Swipe background layers */
+  var bgApprove=document.createElement('div');
+  bgApprove.className='notif-action-bg notif-action-bg-approve';
+  bgApprove.setAttribute('aria-hidden','true');
+  bgApprove.textContent='✓ Approve';
+
+  var bgDismiss=document.createElement('div');
+  bgDismiss.className='notif-action-bg notif-action-bg-dismiss';
+  bgDismiss.setAttribute('aria-hidden','true');
+  bgDismiss.textContent='✕ Dismiss';
+
+  wrap.appendChild(bgApprove);
+  wrap.appendChild(bgDismiss);
+
+  /* Main row */
+  var row=document.createElement('div');
+  row.className='notif-row'+(n.read?'':' unread');
+  row.setAttribute('role','listitem');
+  row.setAttribute('aria-label',n.title);
+
+  /* Priority dot */
+  var dot=document.createElement('span');
+  dot.className='priority-dot '+priorityDotClass(n.priority);
+  dot.setAttribute('aria-label',n.priority+' priority');
+  row.appendChild(dot);
+
+  /* Category icon */
+  var catIco=document.createElement('div');
+  catIco.className='cat-ico '+categoryIconClass(n.category);
+  catIco.setAttribute('aria-hidden','true');
+  catIco.textContent=categoryEmoji(n.category);
+  row.appendChild(catIco);
+
+  /* Body */
+  var body=document.createElement('div');
+  body.className='notif-body';
+
+  var title=document.createElement('div');
+  title.className='notif-title';
+  title.textContent=n.title;
+  body.appendChild(title);
+
+  var text=document.createElement('div');
+  text.className='notif-text';
+  text.textContent=n.body;
+  body.appendChild(text);
+
+  var meta=document.createElement('div');
+  meta.className='notif-meta';
+
+  var timeSpan=document.createElement('span');
+  timeSpan.className='notif-time';
+  timeSpan.textContent=n.time;
+  meta.appendChild(timeSpan);
+
+  var catBadge=document.createElement('span');
+  catBadge.className='badge b-grey';
+  catBadge.textContent=n.category;
+  meta.appendChild(catBadge);
+
+  var priClass='b-red';
+  if(n.priority==='Medium')priClass='b-amber';
+  if(n.priority==='Low')priClass='b-grey';
+  var priBadge=document.createElement('span');
+  priBadge.className='badge '+priClass;
+  priBadge.textContent=n.priority;
+  meta.appendChild(priBadge);
+
+  if(!n.read){
+    var ud=document.createElement('span');
+    ud.className='unread-dot';
+    ud.setAttribute('aria-label','unread');
+    meta.appendChild(ud);
+  }
+  body.appendChild(meta);
+
+  /* WhatsApp button — only if there is a supplier phone */
+  if(n.supplierPhone){
+    var waBtn=document.createElement('button');
+    waBtn.className='btn btn-wa btn-sm';
+    waBtn.style.marginTop='8px';
+    waBtn.textContent='💬 Remind via WhatsApp';
+    var capturedPhone=n.supplierPhone;
+    var capturedName=n.supplierName;
+    var capturedTitle=n.title;
+    waBtn.onclick=function(e){
+      e.stopPropagation();
+      sendWhatsApp(capturedPhone,capturedName,capturedTitle);
+    };
+    body.appendChild(waBtn);
+  }
+
+  row.appendChild(body);
+
+  /* Desktop action buttons */
+  var actions=document.createElement('div');
+  actions.className='notif-actions';
+
+  if(n.category==='Approvals'||n.category==='Alerts'){
+    var appBtn=document.createElement('button');
+    appBtn.className='btn btn-ok btn-sm';
+    appBtn.setAttribute('aria-label','Approve '+n.title);
+    appBtn.textContent='✓';
+    var capturedId=n.id;
+    appBtn.onclick=function(e){e.stopPropagation();approveNotif(capturedId);};
+    actions.appendChild(appBtn);
+  }
+
+  var dimBtn=document.createElement('button');
+  dimBtn.className='btn btn-no btn-sm';
+  dimBtn.setAttribute('aria-label','Dismiss '+n.title);
+  dimBtn.textContent='✕';
+  var capturedIdDis=n.id;
+  dimBtn.onclick=function(e){e.stopPropagation();dismissNotif(capturedIdDis);};
+  actions.appendChild(dimBtn);
+
+  row.appendChild(actions);
+
+  /* Mark read on row click */
+  row.onclick=function(){if(!n.read)markRead(n.id);};
+
+  wrap.appendChild(row);
+
+  /* Swipe gesture (touch) */
+  attachSwipe(wrap,row,bgApprove,bgDismiss,n);
+
+  return wrap;
+}
+
+/**
+ * Attach touchstart/touchmove/touchend swipe gesture to a notification row.
+ * Swipe right = Approve, swipe left = Dismiss.
+ * @param {HTMLElement} wrap - outer wrapper
+ * @param {HTMLElement} row - inner row element
+ * @param {HTMLElement} bgApprove - green approve background
+ * @param {HTMLElement} bgDismiss - red dismiss background
+ * @param {Object} n - notification object
+ */
+function attachSwipe(wrap,row,bgApprove,bgDismiss,n){
+  var startX=0;
+  var currentX=0;
+  var THRESHOLD=80;
+  var isDragging=false;
+
+  row.addEventListener('touchstart',function(e){
+    startX=e.touches[0].clientX;
+    currentX=0;
+    isDragging=true;
+  },{passive:true});
+
+  row.addEventListener('touchmove',function(e){
+    if(!isDragging)return;
+    currentX=e.touches[0].clientX-startX;
+    row.style.transform='translateX('+currentX+'px)';
+    row.style.transition='none';
+    if(currentX>0){
+      bgApprove.style.opacity=Math.min(currentX/THRESHOLD,1)+'';
+      bgDismiss.style.opacity='0';
+    }else{
+      bgDismiss.style.opacity=Math.min((-currentX)/THRESHOLD,1)+'';
+      bgApprove.style.opacity='0';
+    }
+  },{passive:true});
+
+  row.addEventListener('touchend',function(){
+    if(!isDragging)return;
+    isDragging=false;
+    row.style.transition='transform .25s ease';
+    bgApprove.style.opacity='0';
+    bgDismiss.style.opacity='0';
+    if(currentX>THRESHOLD){
+      row.style.transform='translateX(100%)';
+      setTimeout(function(){approveNotif(n.id);},220);
+    }else if(currentX<-THRESHOLD){
+      row.style.transform='translateX(-100%)';
+      setTimeout(function(){dismissNotif(n.id);},220);
+    }else{
+      row.style.transform='translateX(0)';
+    }
+  });
+}
+
+/**
+ * Render the full notifications list into #notifList.
+ */
+function renderNotifList(){
+  var container=$('#notifList');
+  var items=getFilteredSorted();
+  container.innerHTML='';
+  if(!items.length){
+    var empty=document.createElement('div');
+    empty.className='empty-state';
+    var ico=document.createElement('div');
+    ico.className='es-ico';
+    ico.textContent='🎉';
+    var msg=document.createElement('p');
+    msg.textContent='All caught up! No notifications in this category.';
+    empty.appendChild(ico);
+    empty.appendChild(msg);
+    container.appendChild(empty);
+    return;
+  }
+  items.forEach(function(n){
+    container.appendChild(buildNotifRow(n));
+  });
+}
+
+/**
+ * Render the email digest preview card above the notification layout.
+ */
+function renderDigestCard(){
+  var card=$('#digestCard');
+  var pendingApprovals=NOTIFICATIONS.filter(function(n){return n.category==='Approvals'&&!n.resolved;}).length;
+  var pendingOffers=NOTIFICATIONS.filter(function(n){return n.category==='Offers'&&!n.resolved;}).length;
+  var pendingAlerts=NOTIFICATIONS.filter(function(n){return n.category==='Alerts'&&!n.resolved;}).length;
+  var totalUnread=countUnread();
+
+  var titleDiv=document.createElement('div');
+  titleDiv.className='digest-title';
+  titleDiv.textContent='📧 Email Digest — Today, 3 June 2026 · Hadbin Road & Infrastructure';
+  card.appendChild(titleDiv);
+
+  var subtitle=document.createElement('p');
+  subtitle.style.fontSize='12px';
+  subtitle.style.color='var(--muted)';
+  subtitle.style.marginBottom='12px';
+  subtitle.textContent='Summary of pending procurement items as of 08:00 AM. Configure in Settings.';
+  card.appendChild(subtitle);
+
+  var rows=[
+    {label:'Pending Approvals (PRs)',val:pendingApprovals+' items'},
+    {label:'Active Offers (expiring soon)',val:pendingOffers+' items'},
+    {label:'Stock & Compliance Alerts',val:pendingAlerts+' items'},
+    {label:'Total Unread Notifications',val:totalUnread+' unread'},
+    {label:'Monthly Spend vs Budget',val:'80% reached — 51,776 / 64,720 OMR'}
+  ];
+  rows.forEach(function(r){
+    var row=document.createElement('div');
+    row.className='digest-row';
+    var lbl=document.createElement('span');
+    lbl.className='digest-label';
+    lbl.textContent=r.label;
+    var val=document.createElement('span');
+    val.className='digest-val';
+    val.textContent=r.val;
+    row.appendChild(lbl);
+    row.appendChild(val);
+    card.appendChild(row);
+  });
+}
+
+/* ---- Notification settings persistence ---- */
+/**
+ * Save notification settings to localStorage.
+ */
+function saveSettings(){
+  var settings={
+    emailDigest:$('#togEmail').checked,
+    soundHighPriority:$('#togSound').checked,
+    pushNotifications:$('#togPush').checked
+  };
+  localStorage.setItem('nexus-notif-settings',JSON.stringify(settings));
+  toast('Settings saved');
+}
+
+/**
+ * Load notification settings from localStorage and apply to toggles.
+ */
+function loadSettings(){
+  var raw=localStorage.getItem('nexus-notif-settings');
+  if(!raw)return;
+  try{
+    var settings=JSON.parse(raw);
+    if($('#togEmail'))$('#togEmail').checked=settings.emailDigest?true:false;
+    if($('#togSound'))$('#togSound').checked=settings.soundHighPriority?true:false;
+    if($('#togPush'))$('#togPush').checked=settings.pushNotifications?true:false;
+  }catch(e){}
+}
+
+/* ---- boot ---- */
+/**
+ * Bootstrap the notifications module.
+ */
+function boot(){
+  initTheme();
+  renderShell();
+  renderRail();
+  renderNotifList();
+  updateUnreadBadge();
+  renderDigestCard();
+  loadSettings();
+  initSearch();
+  initLive();
+}
+document.addEventListener('DOMContentLoaded',boot);
+
+/* ---- PWA ---- */
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('nexus-sw.js').catch(function(){});});}
+</script>
+</body>
+</html>
