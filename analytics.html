@@ -14,6 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="nexus-core.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 /* ============================================================
@@ -405,9 +406,7 @@ button{font-family:inherit;cursor:pointer;}
 "use strict";
 
 /* ---- Firebase (shared project) ---- */
-var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
-var db=null;
-try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){console.warn('firebase init',e);}
+var db=window.db; /* Firebase initialised by nexus-core.js */
 
 /* ---- Navigation model (shared across all modules) ---- */
 var NAV=[
@@ -546,7 +545,7 @@ function renderShell(){
 }
 
 /** Sign out: show demo toast. */
-function signOut(){toast('Signed out (demo session)');}
+function signOut(){if(window.Nexus){Nexus.logout();}else{toast('Signed out');}}
 
 /* ---- global search ---- */
 /**
@@ -1030,6 +1029,9 @@ function ordinal(n){
  * date presets, builder state, and resize handler.
  */
 function boot(){
+  if(!window.Nexus||!Nexus.requireAuth())return;
+  if(!Nexus.guardSection('analytics'))return;
+  Nexus.applyIdentity();
   initTheme();
   renderShell();
   renderCharts();
@@ -1038,6 +1040,13 @@ function boot(){
   setPreset('ytd');
   var state=loadBuilderState();
   applyBuilderState(state);
+  Nexus.applyChrome('analytics');
+  Nexus.load([
+    {name:'materials',apply:function(a){SEED.materials=a;}},
+    {name:'suppliers',apply:function(a){SEED.suppliers=a;}},
+    {name:'offers',apply:function(a){SEED.offers=a;}},
+    {name:'prs',apply:function(a){SEED.prs=a;}}
+  ]).then(function(){renderCharts();renderShell();Nexus.applyChrome('analytics');});
   window.addEventListener('resize',function(){clearTimeout(window._rt);window._rt=setTimeout(renderCharts,200);});
 }
 document.addEventListener('DOMContentLoaded',boot);

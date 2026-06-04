@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Submit an Offer — ERP Nexus</title>
+<meta name="theme-color" content="#E8612C">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="nexus-core.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--primary:#E8612C;--primary-d:#C44D1E;--primary-l:rgba(232,97,44,.09);--green:#1DB06A;--red:#E5484D;--bg:#F4F5F9;--surface:#fff;--surface-2:#FAFBFE;--text:#0F1117;--muted:#7B8299;--border:#E7EAF2;}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);}
+.page{min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px 48px;}
+.card{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 20px 50px rgba(15,17,23,.1);overflow:hidden;}
+.head{background:linear-gradient(135deg,var(--primary),#F4863F);color:#fff;padding:24px 22px;}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.mark{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;}
+.bname{font-size:14px;font-weight:800;}
+.head h1{font-size:20px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px;}
+.head p{font-size:12.5px;opacity:.9;}
+.ctx{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+.chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:700;}
+.body{padding:22px;}
+.fld{margin-bottom:15px;}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px;}
+.fld input,.fld textarea{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:11px;background:var(--surface-2);color:var(--text);font-family:inherit;font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s;}
+.fld textarea{min-height:90px;resize:vertical;}
+.fld input:focus,.fld textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l);background:var(--surface);}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.btn{width:100%;height:48px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s;}
+.btn:hover{background:var(--primary-d);}.btn:disabled{opacity:.6;cursor:default;}
+.msg{font-size:12.5px;font-weight:600;margin-top:14px;text-align:center;min-height:18px;}
+.msg.err{color:var(--red);}.msg.ok{color:var(--green);}
+.foot{text-align:center;font-size:11px;color:var(--muted);padding:0 22px 22px;line-height:1.6;}
+.done{text-align:center;padding:42px 26px;}
+.done-ico{width:64px;height:64px;border-radius:50%;background:rgba(29,176,106,.12);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 18px;}
+.done h2{font-size:20px;font-weight:800;margin-bottom:8px;}
+.done p{font-size:13px;color:var(--muted);line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <div class="head">
+      <div class="brand"><div class="mark">NX</div><div class="bname">ERP Nexus</div></div>
+      <h1>Submit your offer</h1>
+      <p>Share your best price with the procurement team. No account needed.</p>
+      <div class="ctx" id="ctx"></div>
+    </div>
+    <div id="formView">
+      <div class="body">
+        <form id="offerForm" autocomplete="off">
+          <div class="fld"><label for="oItems">Item / service &amp; quantity</label><textarea id="oItems" placeholder="e.g. Bitumen 60/70 — 100 ton"></textarea></div>
+          <div class="row">
+            <div class="fld"><label for="oPrice">Total price (OMR)</label><input id="oPrice" type="number" inputmode="decimal" step="0.001" placeholder="0.000"></div>
+            <div class="fld"><label for="oValid">Valid until</label><input id="oValid" type="date"></div>
+          </div>
+          <div class="fld"><label for="oContact">Your contact (phone/email)</label><input id="oContact" type="text" placeholder="+968 …"></div>
+          <div class="fld"><label for="oNote">Note (optional)</label><input id="oNote" type="text" placeholder="Delivery terms, lead time…"></div>
+          <button class="btn" id="sendBtn" type="submit">Send offer</button>
+          <div class="msg" id="msg" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+      <div class="foot">Your details are sent securely to the procurement team for the named project only.</div>
+    </div>
+    <div id="doneView" style="display:none">
+      <div class="done">
+        <div class="done-ico">✓</div>
+        <h2>Offer received</h2>
+        <p>Thank you. The procurement team has been notified and will be in touch. You can close this page.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+/** Read a query-string parameter. @param {string} k @returns {string} */
+function qp(k) { return new URLSearchParams(location.search).get(k) || ""; }
+
+var SUPPLIER_ID = qp("supplier");
+var SITE_ID = qp("site");
+var TOKEN = qp("token");
+var supplierName = qp("name");
+var siteName = "";
+
+/** Set a status message. @param {string} t @param {string} kind */
+function setMsg(t, kind) { var m = document.getElementById("msg"); m.textContent = t || ""; m.className = "msg" + (kind ? " " + kind : ""); }
+
+/** Render the supplier/site context chips. */
+function renderCtx() {
+  var c = document.getElementById("ctx");
+  var html = "";
+  if (supplierName) { html += '<span class="chip">🏭 ' + supplierName + "</span>"; }
+  if (siteName) { html += '<span class="chip">📍 ' + siteName + "</span>"; }
+  c.innerHTML = html;
+}
+
+/** Resolve supplier + site display names from Firestore (best effort). */
+function loadContext() {
+  if (!window.db) { renderCtx(); return; }
+  if (SITE_ID) {
+    db.collection("nexus_sites").doc(SITE_ID).get().then(function (d) {
+      if (d.exists) { siteName = d.data().name || ""; renderCtx(); }
+    }).catch(function () {});
+  }
+  if (SUPPLIER_ID && !supplierName) {
+    db.collection("nexus_suppliers").doc(SUPPLIER_ID).get().then(function (d) {
+      if (d.exists) { supplierName = d.data().name || ""; renderCtx(); }
+    }).catch(function () {});
+  }
+  renderCtx();
+}
+
+/** Submit the offer to nexus_offers (public, unscoped write). @param {Event} e */
+function onSubmit(e) {
+  e.preventDefault();
+  var items = document.getElementById("oItems").value.trim();
+  var price = parseFloat(document.getElementById("oPrice").value) || 0;
+  var valid = document.getElementById("oValid").value;
+  var contact = document.getElementById("oContact").value.trim();
+  var note = document.getElementById("oNote").value.trim();
+  if (!items) { setMsg("Please describe the item or service", "err"); return; }
+  if (!price) { setMsg("Please enter a total price", "err"); return; }
+  if (!window.db) { setMsg("Network unavailable — please try again", "err"); return; }
+  var btn = document.getElementById("sendBtn");
+  btn.disabled = true; setMsg("Sending…");
+  db.collection("nexus_offers").add({
+    siteId: SITE_ID || null,
+    supplierId: SUPPLIER_ID || null,
+    supplierName: supplierName || "Supplier",
+    items: items, price: price, validity: valid || null,
+    contact: contact, note: note,
+    status: "New", source: "public-link", token: TOKEN || null,
+    createdAt: Date.now()
+  }).then(function () {
+    document.getElementById("formView").style.display = "none";
+    document.getElementById("doneView").style.display = "block";
+  }).catch(function () {
+    setMsg("Could not send — please try again", "err");
+    btn.disabled = false;
+  });
+}
+
+/** Boot the public offer form. */
+function boot() {
+  document.getElementById("offerForm").addEventListener("submit", onSubmit);
+  loadContext();
+}
+document.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>

@@ -36,9 +36,20 @@ A 2026-ready, PWA-first procurement ERP. Each module is a **single self-containe
 
 Realistic Omani construction data — **Hadbin Road & Infrastructure** project, Muscat/Jabal Akhdar/Sur suppliers (BRIGHT LIGHT, AL MAHA PETROLEUM, JABAL QUARRIES…), materials (Bitumen 60/70, Diesel, Aggregate 20mm, Crawler Crane 150T, Rebar, Cement). Currency: **OMR**.
 
+## Access control & multi-site
+
+- **Login** (`login.html`) — usernames + passwords live in the `nexus_users` Firestore collection; passwords are stored **SHA-256 hashed** (never plaintext). First run shows a one-time **"Create administrator"** bootstrap when no users exist.
+- **Sites** — admins create sites in **Settings → Sites** (`nexus_sites`). Every record is stamped with `siteId`; every read is filtered to the user's active site, so a user assigned to one site never sees another site's data. A site switcher sits in the top bar.
+- **Permissions** — when an admin creates a user (**Settings → User Management**) they set: job type, **site membership**, and **per-section ON/OFF toggles**. The sidebar hides sections a user can't access, and direct-URL access is guarded (redirect).
+- **Admin / God mode** — an administrator sees **all sites** (site switcher includes "All sites") and **all sections**.
+- **Suppliers & offers** — procurement creates suppliers (name + phone + email) in `suppliers.html`; **"Request Offer"** sends the supplier a free `wa.me` link to the public `offer-submit.html` page (no login). Submitted offers land in `nexus_offers` for that site and appear in `offers.html`.
+- **Shared core** — `nexus-core.js` holds the single Firebase config (project `procurement-erp-6e271`) plus the session, hashing, site-scoping, and nav-permission logic used by every module.
+
+> ⚠️ **Security caveat:** because authentication is custom (username/password in Firestore, **not** Firebase Auth), Firestore rules can't verify the caller — gating is *application-level* and passwords are *hashed*, but the DB is not cryptographically locked. See `firestore.rules`. Recommended follow-up: add Firebase Auth so rules can enforce `siteId`/role server-side.
+
 ## Run / Deploy
 
-Static files — serve the folder over any HTTP server (Firebase Hosting recommended). Entry point: `dashboard.html`.
+Static files — serve the folder over any HTTP server (Firebase Hosting recommended). Entry point: `login.html`. Firebase project: `procurement-erp-6e271` (config in `nexus-core.js`); deploy rules from `firestore.rules`.
 
 ```bash
 # local preview

@@ -14,6 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="nexus-core.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 /* ============================================================
@@ -247,9 +248,7 @@ button{font-family:inherit;cursor:pointer;}
 "use strict";
 
 /* ---- Firebase (shared project) ---- */
-var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
-var db=null;
-try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){console.warn('firebase init',e);}
+var db=window.db; /* Firebase initialised by nexus-core.js */
 
 /* ---- Navigation model (shared across all modules) ---- */
 var NAV=[
@@ -339,7 +338,7 @@ function renderShell(){
   sb.innerHTML=head+body+foot;
   var bn=$('#bottomNav');if(bn){var h='';BOTTOM.forEach(function(id){var n=NAV.find(function(x){return x.id===id;});if(!n)return;h+='<a class="bn-i'+(id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label.split(' ')[0]+'</a>';});bn.innerHTML=h;}
 }
-function signOut(){toast('Signed out (demo session)');}
+function signOut(){if(window.Nexus){Nexus.logout();}else{toast('Signed out');}}
 
 /* ---- global search ---- */
 function buildSearchIndex(){
@@ -440,10 +439,26 @@ function initLive(){
   if(db){try{db.collection('nexus_meta').doc('heartbeat').onSnapshot(function(){},function(){});}catch(e){}}
 }
 
+/* ---- normalise Firestore/public offers into the demo shape ---- */
+function normOffer(o){
+  if(o.item){return o;}
+  return {id:o.id,supplier:o.supplierName||o.supplier||'Supplier',item:o.items||o.item||'',price:o.price||0,unit:o.unit||o.price||0,valid:o.validity||o.valid||'',status:o.status||'New',insight:o.insight||'',source:o.source||'manual'};
+}
+
 /* ---- boot ---- */
 function boot(){
+  if(!window.Nexus||!Nexus.requireAuth())return;
+  if(!Nexus.guardSection('dashboard'))return;
+  Nexus.applyIdentity();
   $('#tbDate').textContent=new Date('2026-06-03').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' · '+SEED.meta.project;
-  initTheme();renderShell();renderKPIs();renderActions();renderFeed();renderCharts();initSearch();initLive();
+  initTheme();renderShell();renderKPIs();renderActions();renderFeed();renderCharts();initSearch();initLive();Nexus.applyChrome('dashboard');
+  Nexus.load([
+    {name:'materials',apply:function(a){SEED.materials=a;}},
+    {name:'suppliers',apply:function(a){SEED.suppliers=a;}},
+    {name:'offers',apply:function(a){SEED.offers=a.map(normOffer);}},
+    {name:'prs',apply:function(a){SEED.prs=a;}},
+    {name:'activity',apply:function(a){SEED.activity=a;}}
+  ]).then(function(){renderShell();renderKPIs();renderActions();renderFeed();renderCharts();Nexus.applyChrome('dashboard');});
   window.addEventListener('resize',function(){clearTimeout(window._rt);window._rt=setTimeout(renderCharts,200);});
 }
 document.addEventListener('DOMContentLoaded',boot);

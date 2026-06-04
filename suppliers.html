@@ -14,6 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="nexus-core.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 /* ============================================================
@@ -303,6 +304,7 @@ button{font-family:inherit;cursor:pointer;}
         <div class="search-results" id="searchResults" role="listbox"></div>
       </div>
       <div class="tb-actions">
+        <button class="btn btn-pri btn-sm" onclick="openNewSupplier()" aria-label="Add a new supplier">+ New Supplier</button>
         <div class="live-pill" id="livePill"><span class="live-dot"></span><span>Live</span></div>
         <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">🌙</button>
       </div>
@@ -351,6 +353,26 @@ button{font-family:inherit;cursor:pointer;}
   </div>
 </div>
 
+<!-- ===================== NEW SUPPLIER MODAL ===================== -->
+<div class="overlay" id="newSupplierModal" role="dialog" aria-modal="true" aria-labelledby="newSupTitle">
+  <div class="modal">
+    <div class="modal-h">
+      <div class="modal-t" id="newSupTitle">New Supplier</div>
+      <button class="icon-btn" onclick="closeModal('newSupplierModal')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="fld"><label for="nsName">Company / Supplier name</label><input id="nsName" type="text" placeholder="e.g. AL NOOR TRADING" autocomplete="off"></div>
+      <div class="fld"><label for="nsPhone">Phone (with country code)</label><input id="nsPhone" type="tel" placeholder="e.g. +968 9XXX XXXX" autocomplete="off"></div>
+      <div class="fld"><label for="nsEmail">Email (optional)</label><input id="nsEmail" type="email" placeholder="e.g. sales@supplier.om" autocomplete="off"></div>
+      <div class="msg" id="nsMsg" role="status" aria-live="polite" style="color:var(--red);font-size:12px;font-weight:600;min-height:16px"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('newSupplierModal')">Cancel</button>
+      <button class="btn btn-pri" id="nsSaveBtn" onclick="createSupplier()">Add Supplier</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== QUOTE MODAL ===================== -->
 <div class="overlay" id="quoteModal" role="dialog" aria-modal="true" aria-labelledby="quoteTitle">
   <div class="modal modal-quote">
@@ -394,9 +416,7 @@ button{font-family:inherit;cursor:pointer;}
    ============================================================ */
 
 /* ---- Firebase (shared project) ---- */
-var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
-var db=null;
-try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){console.warn('firebase init',e);}
+var db=window.db; /* Firebase initialised by nexus-core.js */
 
 /* ---- Navigation model (shared across all modules) ---- */
 var NAV=[
@@ -700,7 +720,7 @@ function renderShell(){
     bn.innerHTML=h;
   }
 }
-function signOut(){toast('Signed out (demo session)');}
+function signOut(){if(window.Nexus){Nexus.logout();}else{toast('Signed out');}}
 
 /* ---- global search (shared) ---- */
 function buildSearchIndex(){
@@ -939,7 +959,7 @@ function renderGrid(){
     if(isRisk){
       html+='<button class="btn btn-no btn-sm" disabled aria-label="Quote request blocked — no trade license" title="Approval blocked: no trade license">🔒 Blocked</button>';
     }else{
-      html+='<button class="btn btn-pri btn-sm" style="flex:1" onclick="openQuote(\''+s.id+'\')" aria-label="Request quote from '+s.name+'">📝 Quote</button>';
+      html+='<button class="btn btn-pri btn-sm" style="flex:1" onclick="requestOffer(\''+s.id+'\')" aria-label="Request an offer from '+s.name+' via WhatsApp" title="Send a WhatsApp offer link">📨 Request Offer</button>';
     }
     html+='</div>';
 
@@ -947,6 +967,73 @@ function renderGrid(){
   });
 
   grid.innerHTML=html;
+}
+
+/* ---- Create supplier (procurement) ---- */
+/** Open the New Supplier modal. */
+function openNewSupplier(){
+  $('#nsName').value='';$('#nsPhone').value='';$('#nsEmail').value='';$('#nsMsg').textContent='';
+  openModal('newSupplierModal');
+}
+
+/** Validate and persist a new supplier to the active site (nexus_suppliers). */
+function createSupplier(){
+  var name=$('#nsName').value.trim();
+  var phone=$('#nsPhone').value.trim();
+  var email=$('#nsEmail').value.trim();
+  var msg=$('#nsMsg');
+  msg.textContent='';
+  if(!name){msg.textContent='Enter a supplier name';return;}
+  if(!phone){msg.textContent='Enter a phone number';return;}
+  if(!window.Nexus){msg.textContent='Offline — cannot save';return;}
+  if(Nexus.activeSite()===Nexus.ALL){msg.textContent='Select a specific site (top bar) before adding a supplier';return;}
+  var btn=$('#nsSaveBtn');
+  btn.disabled=true;
+  Nexus.add('suppliers',{
+    name:name,phone:phone,email:email,
+    bin:'',loc:'New',score:'B',orders:0,onTime:0,priceVsMkt:0,
+    avatarColor:'#2D7DD2',
+    docs:[],orders_history:[],contracts:[],
+    radar:{price:70,quality:70,onTime:70,responsiveness:70,compliance:70}
+  }).then(function(){
+    btn.disabled=false;
+    closeModal('newSupplierModal');
+    toast('Supplier added: '+name);
+    Nexus.load([{name:'suppliers',apply:function(a){SEED.suppliers=a;}}]).then(function(){renderKpis();renderGrid();});
+  }).catch(function(){
+    btn.disabled=false;
+    msg.textContent='Could not save supplier — try again';
+  });
+}
+
+/* ---- Request an offer (token-before-WhatsApp + public link) ---- */
+/**
+ * Send the supplier a WhatsApp message containing a public offer-submit link.
+ * A token is written to Firestore BEFORE opening wa.me (mandatory rule).
+ * @param {string} supplierId
+ */
+function requestOffer(supplierId){
+  var s=SEED.suppliers.find(function(x){return x.id===supplierId;});
+  if(!s)return;
+  var phoneRaw=(s.phone||'').replace(/\D/g,'');
+  if(!phoneRaw){toast('This supplier has no phone number');return;}
+  var site=Nexus.activeSite();
+  if(site===Nexus.ALL){toast('Select a specific site before requesting an offer');return;}
+  var base=location.href.replace(/[^/]*$/,'');
+  var token='req-'+Date.now().toString(36);
+  var link=base+'offer-submit.html?supplier='+encodeURIComponent(s.id)+'&site='+encodeURIComponent(site)+'&name='+encodeURIComponent(s.name)+'&token='+token;
+  var msg='Hello '+s.name+', please submit your best offer for our project using this secure link: '+link;
+  var record={
+    supplierId:s.id,supplierName:s.name,phone:s.phone,siteId:site,token:token,
+    message:msg,initiatedBy:(Nexus.session()||{}).username||SEED.user.name,at:Date.now(),
+    context:'Offer request link sent to supplier'
+  };
+  var go=function(){window.open('https://wa.me/'+phoneRaw+'?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');toast('Offer link sent to '+s.name);};
+  if(window.db){
+    db.collection('nexus_whatsapp_tokens').add(record).then(go).catch(go);
+  }else{
+    go();
+  }
 }
 
 /* ---- WhatsApp with Firestore token ---- */
@@ -1310,6 +1397,9 @@ if('serviceWorker' in navigator){
  * Bootstrap the Suppliers module.
  */
 function boot(){
+  if(!window.Nexus||!Nexus.requireAuth())return;
+  if(!Nexus.guardSection('suppliers'))return;
+  Nexus.applyIdentity();
   initTheme();
   renderShell();
   renderKpis();
@@ -1317,6 +1407,11 @@ function boot(){
   renderGrid();
   initSearch();
   initLive();
+  Nexus.applyChrome('suppliers');
+  Nexus.load([
+    {name:'suppliers',apply:function(a){SEED.suppliers=a;}},
+    {name:'offers',apply:function(a){SEED.offers=a.map(function(o){if(o.item){return o;}return {id:o.id,supplier:o.supplierName||o.supplier||'Supplier',item:o.items||o.item||'',price:o.price||0,unit:o.unit||o.price||0,valid:o.validity||o.valid||'',status:o.status||'New',insight:o.insight||'',source:o.source||'manual'};});}}
+  ]).then(function(){renderKpis();renderGrid();renderShell();Nexus.applyChrome('suppliers');});
 
   /* Close overlays by clicking backdrop */
   document.querySelectorAll('.overlay').forEach(function(o){

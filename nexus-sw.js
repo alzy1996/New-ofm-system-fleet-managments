@@ -1,14 +1,14 @@
 /* ERP Nexus — Service Worker (offline-first PWA) */
-const CACHE = 'nexus-v1';
+const CACHE = 'nexus-v2';
 const SHELL = [
+  'login.html', 'offer-submit.html', 'nexus-core.js',
   'dashboard.html', 'materials.html', 'suppliers.html', 'offers.html',
   'purchaserequests.html', 'analytics.html', 'notifications.html', 'settings.html',
   'nexus-manifest.json',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
   'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js',
-  'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js'
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -38,7 +38,7 @@ self.addEventListener('fetch', (e) => {
         const clone = resp.clone();
         caches.open(CACHE).then((c) => c.put(e.request, clone)).catch(() => {});
         return resp;
-      }).catch(() => caches.match('dashboard.html'));
+      }).catch(() => caches.match('login.html'));
     })
   );
 });

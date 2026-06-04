@@ -12,6 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="nexus-core.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 :root{--primary:#E8612C;--primary-d:#C44D1E;--primary-l:rgba(232,97,44,.09);--blue:#2D7DD2;--blue-l:rgba(45,125,210,.1);--green:#1DB06A;--amber:#E8930A;--red:#E5484D;--purple:#7C3AED;--bg:#F4F5F9;--surface:#FFFFFF;--surface-2:#FAFBFE;--text:#0F1117;--muted:#7B8299;--border:#E7EAF2;--sh-sm:0 1px 3px rgba(15,17,23,.06);--sh:0 1px 3px rgba(15,17,23,.06),0 6px 18px rgba(15,17,23,.05);--sh-lg:0 20px 40px rgba(15,17,23,.16);--r:12px;--r-sm:8px;--r-lg:16px;--glass:rgba(255,255,255,.72);}
@@ -186,8 +187,7 @@ button{font-family:inherit;cursor:pointer;}
 
 <script>
 "use strict";
-var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
-var db=null;try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){}
+var db=window.db; /* Firebase initialised by nexus-core.js */
 
 var NAV=[{sec:'Overview'},{id:'dashboard',label:'Command Center',ico:'◈',href:'dashboard.html'},{id:'analytics',label:'Analytics',ico:'📊',href:'analytics.html'},{sec:'Procurement'},{id:'materials',label:'Materials',ico:'📦',href:'materials.html'},{id:'suppliers',label:'Suppliers',ico:'🏭',href:'suppliers.html'},{id:'offers',label:'Offers',ico:'🏷️',href:'offers.html'},{id:'purchaserequests',label:'Purchase Requests',ico:'📋',href:'purchaserequests.html',badge:'pr'},{sec:'Workspace'},{id:'notifications',label:'Notifications',ico:'🔔',href:'notifications.html',badge:'notif'},{id:'settings',label:'Settings',ico:'⚙️',href:'settings.html'}];
 var BOTTOM=['dashboard','materials','purchaserequests','suppliers','notifications'];
@@ -222,7 +222,7 @@ function renderShell(){
     var b='';if(n.badge==='pr'&&pendingPRs())b='<span class="nav-badge">'+pendingPRs()+'</span>';if(n.badge==='notif')b='<span class="nav-badge">5</span>';
     h+='<a class="nav-i'+(n.id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label+b+'</a>';
   });
-  h+='</nav><div class="sb-foot"><div class="u-card"><div class="u-av">'+USER.initials+'</div><div style="flex:1;min-width:0"><div class="u-name">'+USER.name+'</div><div class="u-role">'+USER.role+'</div></div><button class="icon-btn" onclick="toast(\'Signed out (demo)\')" aria-label="Sign out">⏻</button></div></div>';
+  h+='</nav><div class="sb-foot"><div class="u-card"><div class="u-av">'+USER.initials+'</div><div style="flex:1;min-width:0"><div class="u-name">'+USER.name+'</div><div class="u-role">'+USER.role+'</div></div><button class="icon-btn" onclick="if(window.Nexus){Nexus.logout();}" aria-label="Sign out">⏻</button></div></div>';
   sb.innerHTML=h;
   var bn=$('#bottomNav');var bh='';BOTTOM.forEach(function(id){var n=NAV.find(function(x){return x.id===id;});bh+='<a class="bn-i'+(id===CURRENT?' active':'')+'" href="'+n.href+'"><span class="nav-ico">'+n.ico+'</span>'+n.label.split(' ')[0]+'</a>';});bn.innerHTML=bh;
 }
@@ -326,7 +326,13 @@ document.querySelectorAll('.overlay').forEach(function(o){o.addEventListener('cl
 
 function initLive(){function set(on){var p=$('#livePill');if(on){p.classList.remove('offline');p.innerHTML='<span class="live-dot"></span><span>Live</span>';}else{p.classList.add('offline');p.innerHTML='<span class="live-dot"></span><span>Offline</span>';}}window.addEventListener('online',function(){set(true);});window.addEventListener('offline',function(){set(false);});set(navigator.onLine);}
 
-function boot(){initTheme();renderShell();renderKanban();initLive();}
+function boot(){
+  if(!window.Nexus||!Nexus.requireAuth())return;
+  if(!Nexus.guardSection('purchaserequests'))return;
+  Nexus.applyIdentity();
+  initTheme();renderShell();renderKanban();initLive();Nexus.applyChrome('purchaserequests');
+  Nexus.load([{name:'prs',apply:function(a){PRS=a;}}]).then(function(){renderKanban();renderShell();Nexus.applyChrome('purchaserequests');});
+}
 document.addEventListener('DOMContentLoaded',boot);
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('nexus-sw.js').catch(function(){});});}
 </script>

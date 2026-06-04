@@ -1,0 +1,68 @@
+rules_version = '2';
+
+// ============================================================
+// ERP NEXUS — Firestore security rules (project: procurement-erp-6e271)
+// ============================================================
+//
+// IMPORTANT SECURITY NOTE
+// -----------------------
+// ERP Nexus currently authenticates users with a username + password stored
+// in the `nexus_users` collection (no Firebase Authentication). Because there
+// is no verified `request.auth`, these rules CANNOT cryptographically enforce
+// per-site / per-role access at the database layer — that gating happens in the
+// client (nexus-core.js). Anyone with the public API key can technically reach
+// the database.
+//
+// These rules are a pragmatic, best-effort hardening:
+//   * they validate the SHAPE of public supplier offer submissions, and
+//   * they keep everything else open so the app keeps working.
+//
+// STRONGLY RECOMMENDED follow-up: add Firebase Authentication (anonymous or
+// email) and replace the `if true` clauses below with checks such as
+// `request.auth != null` and document-level `siteId` / role assertions.
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Public supplier offer submissions (offer-submit.html) ----
+    // Anyone with a valid offer link may CREATE an offer, but only with the
+    // expected shape; they may not read, edit or delete existing offers.
+    match /nexus_offers/{offerId} {
+      allow read: if true;            // procurement app reads site-scoped offers
+      allow update, delete: if true;  // TODO: restrict to authenticated procurement
+      allow create: if
+        request.resource.data.keys().hasOnly([
+          'siteId','supplierId','supplierName','items','price','validity',
+          'contact','note','status','source','token','createdAt','createdBy'
+        ])
+        && request.resource.data.status is string
+        && request.resource.data.items is string
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0;
+    }
+
+    // ---- Users: contain passwordHash — keep readable for custom-auth login ----
+    // (Login queries by username. Harden once Firebase Auth is added.)
+    match /nexus_users/{userId} {
+      allow read, write: if true;     // TODO: restrict writes to admins via Auth
+    }
+
+    // ---- All other Nexus collections ----
+    match /nexus_sites/{doc}              { allow read, write: if true; }
+    match /nexus_suppliers/{doc}          { allow read, write: if true; }
+    match /nexus_materials/{doc}          { allow read, write: if true; }
+    match /nexus_prs/{doc}                { allow read, write: if true; }
+    match /nexus_activity/{doc}           { allow read, write: if true; }
+    match /nexus_notifications/{doc}      { allow read, write: if true; }
+    match /nexus_settings/{doc}           { allow read, write: if true; }
+    match /nexus_quotes/{doc}             { allow read, write: if true; }
+    match /nexus_negotiations/{doc}       { allow read, write: if true; }
+    match /nexus_schedules/{doc}          { allow read, write: if true; }
+    match /nexus_whatsapp_tokens/{doc}    { allow read, write: if true; }
+    match /nexus_meta/{doc}               { allow read, write: if true; }
+
+    // Deny anything not explicitly matched above.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

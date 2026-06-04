@@ -14,6 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="nexus-core.js"></script>
 <style>
 /* ============================================================
    ERP NEXUS — SHARED DESIGN SYSTEM (canonical, replicated per module)
@@ -494,9 +495,7 @@ button{font-family:inherit;cursor:pointer;}
 "use strict";
 
 /* ---- Firebase (shared project) ---- */
-var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
-var db=null;
-try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){console.warn('firebase init',e);}
+var db=window.db; /* Firebase initialised by nexus-core.js */
 
 /* ---- Navigation model (shared across all modules) ---- */
 var NAV=[
@@ -639,7 +638,7 @@ function renderShell(){
   }
 }
 /** Handle sign out action */
-function signOut(){toast('Signed out (demo session)');}
+function signOut(){if(window.Nexus){Nexus.logout();}else{toast('Signed out');}}
 
 /* ---- Live connection indicator ---- */
 /** Watch browser online/offline events and update the live pill */
@@ -1595,12 +1594,17 @@ document.addEventListener('click',function(e){
 /* ---- Boot ---- */
 /** Main boot sequence: theme, shell, filters, catalog, search, live */
 function boot(){
+  if(!window.Nexus||!Nexus.requireAuth())return;
+  if(!Nexus.guardSection('materials'))return;
+  Nexus.applyIdentity();
   initTheme();
   renderShell();
   buildFilterPanel();
   renderCatalog();
   initSearch();
   initLive();
+  Nexus.applyChrome('materials');
+  Nexus.load([{name:'materials',apply:function(a){SEED.materials=a;}}]).then(function(){buildFilterPanel();renderCatalog();renderShell();Nexus.applyChrome('materials');});
 }
 document.addEventListener('DOMContentLoaded',boot);
 

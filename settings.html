@@ -14,6 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="nexus-core.js"></script>
 <style>
 /* ============================================================
    ERP NEXUS — SHARED DESIGN SYSTEM (canonical, replicated per module)
@@ -332,8 +333,8 @@ button{font-family:inherit;cursor:pointer;}
     <div class="content">
       <div class="page-grid">
 
-        <!-- Role Banner -->
-        <div class="role-banner" role="region" aria-label="Current demo role">
+        <!-- Role Banner (admin preview only) -->
+        <div class="role-banner" id="roleBanner" role="region" aria-label="Current role">
           <span class="role-banner-label">Demo: Current Role</span>
           <div class="role-select-wrap">
             <select id="roleSelector" aria-label="Switch demo role" onchange="switchRole(this.value)">
@@ -377,10 +378,13 @@ button{font-family:inherit;cursor:pointer;}
               <div class="card">
                 <div class="sec-header">
                   <div>
-                    <div class="sec-title">Project Selector</div>
-                    <div class="sec-sub">Switch the active project context for all procurement data</div>
+                    <div class="sec-title">Sites</div>
+                    <div class="sec-sub">Each site keeps its own separate data. Select your active site; admins can add new ones.</div>
                   </div>
-                  <span id="activeProjectBadge" class="badge b-green">Active</span>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span id="activeProjectBadge" class="badge b-green">Active</span>
+                    <button class="btn btn-pri btn-sm" id="newSiteBtn" onclick="openCreateSite()">+ New Site</button>
+                  </div>
                 </div>
                 <div class="project-grid" id="projectGrid"></div>
               </div>
@@ -438,10 +442,27 @@ button{font-family:inherit;cursor:pointer;}
 <div class="toast-wrap" id="toastWrap"></div>
 
 <!-- Invite User Modal -->
+<div class="overlay" id="siteModal" role="dialog" aria-modal="true" aria-labelledby="siteModalTitle">
+  <div class="modal">
+    <div class="modal-h">
+      <div class="modal-t" id="siteModalTitle">New Site</div>
+      <button class="icon-btn" onclick="closeModal('siteModal')" aria-label="Close modal">✕</button>
+    </div>
+    <div class="modal-b">
+      <div class="fld"><label for="siteName">Site Name</label><input type="text" id="siteName" placeholder="e.g. Muscat" autocomplete="off"></div>
+      <div class="fld"><label for="siteLocation">Location (optional)</label><input type="text" id="siteLocation" placeholder="e.g. Muscat Governorate" autocomplete="off"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal('siteModal')">Cancel</button>
+      <button class="btn btn-pri" onclick="createSite()">Create Site</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="inviteModal" role="dialog" aria-modal="true" aria-labelledby="inviteModalTitle">
   <div class="modal">
     <div class="modal-h">
-      <div class="modal-t" id="inviteModalTitle">Invite User</div>
+      <div class="modal-t" id="inviteModalTitle">Create User</div>
       <button class="icon-btn" onclick="closeModal('inviteModal')" aria-label="Close modal">✕</button>
     </div>
     <div class="modal-b">
@@ -449,24 +470,48 @@ button{font-family:inherit;cursor:pointer;}
         <label for="inviteName">Full Name</label>
         <input type="text" id="inviteName" placeholder="e.g. Ahmed Al-Balushi" autocomplete="off">
       </div>
-      <div class="fld">
-        <label for="inviteEmail">Email Address</label>
-        <input type="email" id="inviteEmail" placeholder="e.g. ahmed@contractor.om" autocomplete="off">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fld">
+          <label for="inviteUsername">Username</label>
+          <input type="text" id="inviteUsername" placeholder="e.g. ahmed" autocomplete="off">
+        </div>
+        <div class="fld">
+          <label for="invitePassword">Password</label>
+          <input type="text" id="invitePassword" placeholder="set a password" autocomplete="off">
+        </div>
       </div>
       <div class="fld">
-        <label for="inviteRole">Role</label>
-        <select id="inviteRole">
-          <option value="Admin">Admin</option>
-          <option value="Procurement" selected>Procurement</option>
+        <label for="inviteJobType">Job Type</label>
+        <select id="inviteJobType">
+          <option value="Procurement Officer" selected>Procurement Officer</option>
+          <option value="Procurement Manager">Procurement Manager</option>
           <option value="Finance">Finance</option>
-          <option value="Engineer">Engineer</option>
+          <option value="Site Engineer">Site Engineer</option>
+          <option value="Project Manager">Project Manager</option>
+          <option value="Warehouse Staff">Warehouse Staff</option>
           <option value="Viewer">Viewer</option>
         </select>
       </div>
+      <div class="fld">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">
+          <input type="checkbox" id="inviteAdmin" onchange="toggleAdminFields()" style="width:auto;height:auto"> Administrator (God mode — all sites &amp; all sections)
+        </label>
+      </div>
+      <div id="inviteScopeWrap">
+        <div class="fld">
+          <label>Sites this user belongs to</label>
+          <div id="inviteSites" style="display:flex;flex-direction:column;gap:7px;max-height:120px;overflow-y:auto;border:1.5px solid var(--border);border-radius:10px;padding:10px"></div>
+        </div>
+        <div class="fld">
+          <label>Sections this user can access</label>
+          <div id="inviteSections" style="display:grid;grid-template-columns:1fr 1fr;gap:7px;border:1.5px solid var(--border);border-radius:10px;padding:10px"></div>
+        </div>
+      </div>
+      <div class="msg" id="inviteMsg" role="status" aria-live="polite" style="color:var(--red);font-size:12px;font-weight:600;min-height:16px"></div>
     </div>
     <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal('inviteModal')">Cancel</button>
-      <button class="btn btn-pri" onclick="confirmInvite()">Send Invite</button>
+      <button class="btn btn-pri" id="createUserBtn" onclick="confirmInvite()">Create User</button>
     </div>
   </div>
 </div>
@@ -479,9 +524,7 @@ button{font-family:inherit;cursor:pointer;}
    ============================================================ */
 
 /* ---- Firebase (shared project) ---- */
-var firebaseConfig={apiKey:"AIzaSyBRtMJLwkKRy1twdtezq6GN45GxrGxJx7c",authDomain:"ofm-trucks-movemments-harees.firebaseapp.com",projectId:"ofm-trucks-movemments-harees",storageBucket:"ofm-trucks-movemments-harees.firebasestorage.app",messagingSenderId:"887529330000",appId:"1:887529330000:web:0aee5473176e88df8b0855"};
-var db=null;
-try{firebase.initializeApp(firebaseConfig);db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){console.warn('firebase init',e);}
+var db=window.db; /* Firebase initialised by nexus-core.js */
 
 /* ---- Navigation model (shared across all modules) ---- */
 var NAV=[
@@ -634,7 +677,7 @@ function renderShell(){
 }
 
 /** Sign out the current user (demo). */
-function signOut(){toast('Signed out (demo session)');}
+function signOut(){if(window.Nexus){Nexus.logout();}else{toast('Signed out');}}
 
 /* ---- global search ---- */
 /** Build the full-text search index from SEED data. @returns {Array} */
@@ -802,42 +845,74 @@ function adminRequiredHTML(){
    MODULE H — Settings — Project Selector
    ============================================================ */
 
-/** Render the project selector cards. */
+/** Sites loaded from Firestore (replaces the demo PROJECTS list). */
+var SITES=[];
+
+/** Load sites visible to the current user from Firestore, then render. */
+function loadSitesFromFirestore(){
+  if(!window.Nexus)return;
+  Nexus.sites().then(function(list){SITES=list;renderProjectSelector();renderInviteSites();});
+}
+
+/** Render the site cards (the active-site selector + admin site manager). */
 function renderProjectSelector(){
   var grid=$('#projectGrid');
   if(!grid)return;
+  var active=Nexus.activeSite();
+  if(!SITES.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px;padding:18px">No sites yet.'+(Nexus.isAdmin()?' Use “+ New Site” to create your first one (e.g. Muscat, Sohar).':' Ask your administrator to assign you to a site.')+'</div>';
+    return;
+  }
   var html='';
-  PROJECTS.forEach(function(p){
-    var isActive=(p.id===activeProjectId);
-    var statusClass=p.status==='Active'?'b-green':'b-amber';
+  SITES.forEach(function(p){
+    var isActive=(p.id===active);
+    var statusClass=(p.status==='Planning')?'b-amber':'b-green';
     html+='<div class="project-card'+(isActive?' selected':'')+'" onclick="selectProject(\''+p.id+'\')" role="radio" aria-checked="'+(isActive?'true':'false')+'" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \')selectProject(\''+p.id+'\')">';
-    html+='<div class="project-card-name">'+p.name+'</div>';
-    html+='<div class="project-card-meta">'+p.loc+'</div>';
-    html+='<div class="project-card-meta" style="margin-top:3px">Contract: '+p.value+'</div>';
-    html+='<span class="project-card-badge badge '+statusClass+'">'+p.status+'</span>';
+    html+='<div class="project-card-name"></div>';
+    html+='<div class="project-card-meta loc"></div>';
+    html+='<span class="project-card-badge badge '+statusClass+'">'+(p.status||'Active')+'</span>';
     if(isActive){html+='<span class="project-card-badge badge b-green" style="margin-left:6px">Current</span>';}
     html+='</div>';
   });
   grid.innerHTML=html;
-  var active=PROJECTS.find(function(p){return p.id===activeProjectId;});
+  /* textContent for user-entered site fields (XSS-safe) */
+  var cards=grid.querySelectorAll('.project-card');
+  SITES.forEach(function(p,i){
+    if(!cards[i])return;
+    cards[i].querySelector('.project-card-name').textContent=p.name||'(unnamed site)';
+    cards[i].querySelector('.loc').textContent=p.location||'';
+  });
   var badge=$('#activeProjectBadge');
-  if(badge&&active){badge.textContent='Active: '+active.name;}
+  var act=SITES.find(function(p){return p.id===active;});
+  if(badge){badge.textContent=act?('Active: '+act.name):'God mode — all sites';}
 }
 
 /**
- * Set the active project and persist to localStorage.
- * @param {string} id - Project id.
+ * Set the active site and reload so every module re-scopes its data.
+ * @param {string} id - Site id.
  */
 function selectProject(id){
-  activeProjectId=id;
-  localStorage.setItem('nexus-active-project',id);
-  var p=PROJECTS.find(function(x){return x.id===id;});
-  renderProjectSelector();
-  if(p){
-    toast('Project switched to: '+p.name);
-    SEED.meta.project=p.name;
-    renderShell();
-  }
+  if(window.Nexus){Nexus.switchSite(id);}
+}
+
+/** Create a new site (admin only) from the create-site modal. */
+function createSite(){
+  if(!Nexus.isAdmin()){toast('Only administrators can create sites');return;}
+  var name=$('#siteName').value.trim();
+  var loc=$('#siteLocation').value.trim();
+  if(!name){toast('Enter a site name');return;}
+  if(!window.db){toast('Offline — cannot save');return;}
+  db.collection('nexus_sites').add({name:name,location:loc,status:'Active',createdAt:Date.now(),createdBy:(Nexus.session()||{}).username||'admin'}).then(function(){
+    closeModal('siteModal');$('#siteName').value='';$('#siteLocation').value='';
+    toast('Site created: '+name);
+    location.reload();
+  }).catch(function(){toast('Could not create site');});
+}
+
+/** Open the create-site modal (admin only). */
+function openCreateSite(){
+  if(!Nexus.isAdmin()){toast('Only administrators can create sites');return;}
+  openModal('siteModal');
 }
 
 /* ============================================================
@@ -932,6 +1007,25 @@ function addMatrixLevel(){
    ============================================================ */
 
 /** Render the user management section (admin-gated). */
+/** Load users from Firestore (admin only), then render the table. */
+function loadUsersFromFirestore(){
+  if(!Nexus.isAdmin()||!window.db)return;
+  db.collection('nexus_users').get().then(function(snap){
+    USERS=snap.docs.map(function(d){var o=d.data();o.id=d.id;return o;});
+    renderUsersSection();
+  }).catch(function(){});
+}
+
+/** Map an array of site ids to a readable label using SITES. @param {Array} ids @returns {string} */
+function siteLabels(ids){
+  if(!ids||!ids.length)return '—';
+  return ids.map(function(id){var s=SITES.find(function(x){return x.id===id;});return s?s.name:id;}).join(', ');
+}
+
+/** Initials from a name. @param {string} name @returns {string} */
+function initialsOf(name){return String(name||'').split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase();}
+
+/** Render the user-management table (Firestore-backed, admin-gated). */
 function renderUsersSection(){
   var card=$('#usersCard');
   if(!card)return;
@@ -939,65 +1033,123 @@ function renderUsersSection(){
     card.innerHTML='<div class="sec-header"><div><div class="sec-title">User Management</div><div class="sec-sub">Manage team access and permissions</div></div></div>'+adminRequiredHTML();
     return;
   }
-  var html='<div class="sec-header"><div><div class="sec-title">User Management</div><div class="sec-sub">'+USERS.length+' team members</div></div><button class="btn btn-pri btn-sm" onclick="openModal(\'inviteModal\')">+ Invite User</button></div>';
+  var html='<div class="sec-header"><div><div class="sec-title">User Management</div><div class="sec-sub">'+USERS.length+' user'+(USERS.length===1?'':'s')+'</div></div><button class="btn btn-pri btn-sm" onclick="openCreateUser()">+ Create User</button></div>';
   html+='<div style="overflow-x:auto"><table class="user-table" aria-label="User management">';
-  html+='<thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead><tbody>';
+  html+='<thead><tr><th>Name</th><th>Username</th><th>Job Type</th><th>Sites</th><th>Status</th></tr></thead><tbody>';
   USERS.forEach(function(u){
     var statusClass='status-active';
-    if(u.status==='Inactive'){statusClass='status-inactive';}
+    if(u.status==='Suspended'){statusClass='status-inactive';}
     if(u.status==='Pending'){statusClass='status-pending';}
-    html+='<tr>';
-    html+='<td><span class="user-av" style="background:'+u.color+'">'+u.initials+'</span>'+u.name+'</td>';
-    html+='<td style="color:var(--muted);font-size:12px">'+u.email+'</td>';
-    html+='<td><select aria-label="Role for '+u.name+'" onchange="changeUserRole(\''+u.id+'\',this.value)">';
-    ['Admin','Procurement','Finance','Engineer','Viewer'].forEach(function(r){
-      html+='<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+r+'</option>';
-    });
-    html+='</select></td>';
-    html+='<td><span class="status-dot '+statusClass+'"></span>'+u.status+'</td>';
-    html+='</tr>';
+    var color=u.color||'#2D7DD2';
+    var job=u.isAdmin?'Administrator':(u.jobType||'—');
+    var sitesTxt=u.isAdmin?'All sites':siteLabels(u.sites);
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td><span class="user-av" style="background:'+color+'"></span><span class="u-fullname"></span></td>'+
+      '<td style="color:var(--muted);font-size:12px" class="u-username"></td>'+
+      '<td class="u-job"></td>'+
+      '<td style="font-size:12px;color:var(--muted)" class="u-sites"></td>'+
+      '<td><span class="status-dot '+statusClass+'"></span>'+(u.status||'Active')+'</td>';
+    /* textContent for all user-entered values (XSS-safe) */
+    tr.querySelector('.user-av').textContent=u.initials||initialsOf(u.name);
+    tr.querySelector('.u-fullname').textContent=' '+(u.name||u.username||'');
+    tr.querySelector('.u-username').textContent=u.username||'—';
+    tr.querySelector('.u-job').textContent=job;
+    tr.querySelector('.u-sites').textContent=sitesTxt;
+    html+=tr.outerHTML;
   });
   html+='</tbody></table></div>';
   card.innerHTML=html;
 }
 
-/**
- * Change a user's role in the local array and show a toast.
- * @param {string} userId - User id.
- * @param {string} newRole - New role value.
- */
-function changeUserRole(userId,newRole){
-  var u=USERS.find(function(x){return x.id===userId;});
-  if(!u)return;
-  var oldRole=u.role;
-  u.role=newRole;
-  toast(u.name+': role changed from '+oldRole+' to '+newRole);
+/** Populate the create-user modal scope controls (sites + sections) and open it. */
+function openCreateUser(){
+  renderInviteSites();
+  renderInviteSections();
+  $('#inviteName').value='';
+  $('#inviteUsername').value='';
+  $('#invitePassword').value='';
+  $('#inviteAdmin').checked=false;
+  $('#inviteMsg').textContent='';
+  toggleAdminFields();
+  openModal('inviteModal');
 }
 
-/** Open the invite user modal. */
+/** Render the site checkboxes inside the create-user modal. */
+function renderInviteSites(){
+  var box=$('#inviteSites');
+  if(!box)return;
+  if(!SITES.length){box.innerHTML='<span style="font-size:12px;color:var(--muted)">No sites yet — create a site first.</span>';return;}
+  var html='';
+  SITES.forEach(function(s){
+    html+='<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" class="inv-site" value="'+s.id+'" style="width:auto;height:auto"> <span class="inv-site-name"></span></label>';
+  });
+  box.innerHTML=html;
+  var names=box.querySelectorAll('.inv-site-name');
+  SITES.forEach(function(s,i){if(names[i])names[i].textContent=s.name;});
+}
+
+/** Render the section ON/OFF toggles inside the create-user modal. */
+function renderInviteSections(){
+  var box=$('#inviteSections');
+  if(!box)return;
+  var html='';
+  Nexus.SECTIONS.forEach(function(sec){
+    var def=(sec.id==='dashboard')?' checked':'';
+    html+='<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer"><input type="checkbox" class="inv-sec" value="'+sec.id+'"'+def+' style="width:auto;height:auto"> '+sec.label+'</label>';
+  });
+  box.innerHTML=html;
+}
+
+/** Show/hide the per-site/per-section scope when "Administrator" is toggled. */
+function toggleAdminFields(){
+  var on=$('#inviteAdmin').checked;
+  var wrap=$('#inviteScopeWrap');
+  if(wrap)wrap.style.display=on?'none':'block';
+}
+
+/** Validate and create a new user document in nexus_users (hashed password). */
 function confirmInvite(){
   var name=$('#inviteName').value.trim();
-  var email=$('#inviteEmail').value.trim();
-  var role=$('#inviteRole').value;
-  if(!name){toast('Enter a name');return;}
-  if(!email){toast('Enter an email address');return;}
-  var initials=name.split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase();
-  var colors=['#2D7DD2','#1DB06A','#7C3AED','#E8930A','#E8612C'];
-  var colorIndex=USERS.length%colors.length;
-  USERS.push({
-    id:'u'+(USERS.length+1),
-    name:name,
-    email:email,
-    role:role,
-    status:'Pending',
-    initials:initials,
-    color:colors[colorIndex]
+  var username=$('#inviteUsername').value.trim().toLowerCase();
+  var password=$('#invitePassword').value;
+  var jobType=$('#inviteJobType').value;
+  var isAdminUser=$('#inviteAdmin').checked;
+  var msg=$('#inviteMsg');
+  msg.textContent='';
+  if(!name){msg.textContent='Enter a full name';return;}
+  if(!username){msg.textContent='Enter a username';return;}
+  if(!password||password.length<4){msg.textContent='Password must be at least 4 characters';return;}
+  if(USERS.some(function(u){return (u.username||'').toLowerCase()===username;})){msg.textContent='That username already exists';return;}
+  if(!window.db||!window.Nexus){msg.textContent='Offline — cannot save';return;}
+
+  var sites=[];
+  document.querySelectorAll('.inv-site:checked').forEach(function(c){sites.push(c.value);});
+  var sections={};
+  document.querySelectorAll('.inv-sec:checked').forEach(function(c){sections[c.value]=true;});
+  if(isAdminUser){
+    Nexus.SECTIONS.forEach(function(s){sections[s.id]=true;});
+  }else{
+    if(!sites.length){msg.textContent='Select at least one site for this user';return;}
+    if(!Object.keys(sections).length){msg.textContent='Enable at least one section';return;}
+  }
+
+  var btn=$('#createUserBtn');
+  btn.disabled=true;
+  Nexus.hash(password).then(function(ph){
+    return db.collection('nexus_users').add({
+      username:username,passwordHash:ph,name:name,jobType:isAdminUser?'Administrator':jobType,
+      isAdmin:isAdminUser,sites:sites,sections:sections,status:'Active',
+      initials:initialsOf(name),createdAt:Date.now(),createdBy:(Nexus.session()||{}).username||'admin'
+    });
+  }).then(function(){
+    btn.disabled=false;
+    closeModal('inviteModal');
+    toast('User created: '+username);
+    loadUsersFromFirestore();
+  }).catch(function(){
+    btn.disabled=false;
+    msg.textContent='Could not create user — try again';
   });
-  closeModal('inviteModal');
-  $('#inviteName').value='';
-  $('#inviteEmail').value='';
-  renderUsersSection();
-  toast('Invite sent to '+email);
 }
 
 /* ============================================================
@@ -1185,6 +1337,11 @@ document.addEventListener('click',function(e){
 
 /** Boot the settings module. */
 function boot(){
+  if(!window.Nexus||!Nexus.requireAuth())return;
+  if(!Nexus.guardSection('settings'))return;
+  Nexus.applyIdentity();
+  currentRole=Nexus.isAdmin()?'Admin':(Nexus.session().jobType||'Viewer');
+  if(!Nexus.isAdmin()){var rb=$('#roleBanner');if(rb)rb.style.display='none';}
   initTheme();
   renderShell();
   initSearch();
@@ -1194,6 +1351,9 @@ function boot(){
   renderUsersSection();
   renderThemeOptions();
   renderBackupActions();
+  Nexus.applyChrome('settings');
+  loadSitesFromFirestore();
+  loadUsersFromFirestore();
 }
 
 document.addEventListener('DOMContentLoaded',boot);

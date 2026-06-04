@@ -2,7 +2,7 @@
   "name": "ERP Nexus — Procurement & Construction",
   "short_name": "Nexus",
   "description": "ERP Nexus — Procurement & Construction Intelligence Platform",
-  "start_url": "dashboard.html",
+  "start_url": "login.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
