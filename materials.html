@@ -1119,9 +1119,28 @@ function buildMaterialCard(m){
   actions.appendChild(btnQ);
   actions.appendChild(btnPR);
   actions.appendChild(btnH);
+  if(window.Nexus&&Nexus.isAdmin()){
+    var btnD=document.createElement('button');
+    btnD.className='btn btn-no btn-sm';
+    btnD.textContent='🗑️';
+    btnD.title='Delete material (admin)';
+    btnD.setAttribute('aria-label','Delete material '+m.name);
+    btnD.addEventListener('click',function(){deleteMaterial(m);});
+    actions.appendChild(btnD);
+  }
   card.appendChild(actions);
 
   return card;
+}
+
+/** Delete a material (admin only) after confirmation, then refresh the catalog. */
+function deleteMaterial(m){
+  if(!window.Nexus||!Nexus.isAdmin()){toast('Only administrators can delete');return;}
+  if(!confirm('Delete material "'+m.name+'"? This cannot be undone.'))return;
+  Nexus.remove('materials',m.id).then(function(){
+    toast('Material deleted: '+m.name);
+    Nexus.load([{name:'materials',apply:function(a){SEED.materials=a;}}]).then(function(){buildFilterPanel();renderCatalog();});
+  }).catch(function(e){toast(e.message||'Could not delete');});
 }
 
 /** Return a background colour string for a given category */
@@ -1333,6 +1352,15 @@ function renderTableView(items){
     actWrap.appendChild(btnQ);
     actWrap.appendChild(btnPR);
     actWrap.appendChild(btnH);
+    if(window.Nexus&&Nexus.isAdmin()){
+      var btnD=document.createElement('button');
+      btnD.className='btn btn-no btn-sm';
+      btnD.textContent='🗑️';
+      btnD.setAttribute('aria-label','Delete material '+m.name);
+      btnD.setAttribute('title','Delete material (admin)');
+      btnD.addEventListener('click',function(){deleteMaterial(m);});
+      actWrap.appendChild(btnD);
+    }
     tdAct.appendChild(actWrap);
     tr.appendChild(tdAct);
 

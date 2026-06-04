@@ -961,6 +961,9 @@ function renderGrid(){
     }else{
       html+='<button class="btn btn-pri btn-sm" style="flex:1" onclick="requestOffer(\''+s.id+'\')" aria-label="Request an offer from '+s.name+' via WhatsApp" title="Send a WhatsApp offer link">📨 Request Offer</button>';
     }
+    if(window.Nexus&&Nexus.isAdmin()){
+      html+='<button class="btn btn-no btn-sm" onclick="deleteSupplier(\''+s.id+'\')" aria-label="Delete supplier '+s.name+'" title="Delete supplier (admin)">🗑️</button>';
+    }
     html+='</div>';
 
     html+='</article>';
@@ -1004,6 +1007,18 @@ function createSupplier(){
     btn.disabled=false;
     msg.textContent='Could not save supplier — try again';
   });
+}
+
+/** Delete a supplier (admin only) after confirmation, then refresh the grid. */
+function deleteSupplier(supplierId){
+  var s=SEED.suppliers.find(function(x){return x.id===supplierId;});
+  if(!s)return;
+  if(!window.Nexus||!Nexus.isAdmin()){toast('Only administrators can delete');return;}
+  if(!confirm('Delete supplier "'+s.name+'"? This cannot be undone.'))return;
+  Nexus.remove('suppliers',supplierId).then(function(){
+    toast('Supplier deleted: '+s.name);
+    Nexus.load([{name:'suppliers',apply:function(a){SEED.suppliers=a;}}]).then(function(){renderKpis();renderGrid();});
+  }).catch(function(e){toast(e.message||'Could not delete');});
 }
 
 /* ---- Request an offer (token-before-WhatsApp + public link) ---- */

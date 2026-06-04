@@ -428,6 +428,17 @@ button{font-family:inherit;cursor:pointer;}
                 </div>
                 <div class="backup-actions" id="backupActions"></div>
               </div>
+
+              <!-- Danger Zone (admin only) -->
+              <div class="card" id="dangerZone" style="display:none;border-color:rgba(229,72,77,.4);margin-top:14px">
+                <div class="sec-header">
+                  <div>
+                    <div class="sec-title" style="color:var(--red)">⚠️ Danger Zone</div>
+                    <div class="sec-sub">Permanently delete records for <b id="dzScope">the active site</b>. This cannot be undone.</div>
+                  </div>
+                </div>
+                <div id="dangerActions" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+              </div>
             </section>
 
           </div><!-- /settings-body -->
@@ -1035,7 +1046,8 @@ function renderUsersSection(){
   }
   var html='<div class="sec-header"><div><div class="sec-title">User Management</div><div class="sec-sub">'+USERS.length+' user'+(USERS.length===1?'':'s')+'</div></div><button class="btn btn-pri btn-sm" onclick="openCreateUser()">+ Create User</button></div>';
   html+='<div style="overflow-x:auto"><table class="user-table" aria-label="User management">';
-  html+='<thead><tr><th>Name</th><th>Username</th><th>Job Type</th><th>Sites</th><th>Status</th></tr></thead><tbody>';
+  html+='<thead><tr><th>Name</th><th>Username</th><th>Job Type</th><th>Sites</th><th>Status</th><th></th></tr></thead><tbody>';
+  var myUid=(Nexus.session()||{}).uid;
   USERS.forEach(function(u){
     var statusClass='status-active';
     if(u.status==='Suspended'){statusClass='status-inactive';}
@@ -1043,12 +1055,16 @@ function renderUsersSection(){
     var color=u.color||'#2D7DD2';
     var job=u.isAdmin?'Administrator':(u.jobType||'—');
     var sitesTxt=u.isAdmin?'All sites':siteLabels(u.sites);
+    var delCell='<td></td>';
+    if(u.id&&u.id!==myUid){
+      delCell='<td><button class="btn btn-no btn-sm" onclick="deleteUser(\''+u.id+'\')" aria-label="Delete user" title="Delete user (admin)">🗑️</button></td>';
+    }
     var tr=document.createElement('tr');
     tr.innerHTML='<td><span class="user-av" style="background:'+color+'"></span><span class="u-fullname"></span></td>'+
       '<td style="color:var(--muted);font-size:12px" class="u-username"></td>'+
       '<td class="u-job"></td>'+
       '<td style="font-size:12px;color:var(--muted)" class="u-sites"></td>'+
-      '<td><span class="status-dot '+statusClass+'"></span>'+(u.status||'Active')+'</td>';
+      '<td><span class="status-dot '+statusClass+'"></span>'+(u.status||'Active')+'</td>'+delCell;
     /* textContent for all user-entered values (XSS-safe) */
     tr.querySelector('.user-av').textContent=u.initials||initialsOf(u.name);
     tr.querySelector('.u-fullname').textContent=' '+(u.name||u.username||'');
@@ -1152,6 +1168,19 @@ function confirmInvite(){
   });
 }
 
+/** Delete a user (admin only). You cannot delete your own account. */
+function deleteUser(userId){
+  if(!window.Nexus||!Nexus.isAdmin()){toast('Only administrators can delete');return;}
+  if(userId===(Nexus.session()||{}).uid){toast('You cannot delete your own account');return;}
+  var u=USERS.find(function(x){return x.id===userId;});
+  var label=u?(u.name||u.username):'this user';
+  if(!confirm('Delete user "'+label+'"? They will lose access immediately. This cannot be undone.'))return;
+  Nexus.remove('users',userId).then(function(){
+    toast('User deleted: '+label);
+    loadUsersFromFirestore();
+  }).catch(function(e){toast(e.message||'Could not delete');});
+}
+
 /* ============================================================
    MODULE H — Settings — Theme
    ============================================================ */
@@ -1226,6 +1255,57 @@ function renderBackupActions(){
     html+='</div>';
   });
   container.innerHTML=html;
+}
+
+/** Render the admin-only Danger Zone (bulk delete per collection). */
+function renderDangerZone(){
+  var zone=$('#dangerZone');
+  var box=$('#dangerActions');
+  if(!zone||!box)return;
+  if(!Nexus.isAdmin()){zone.style.display='none';return;}
+  zone.style.display='block';
+  var scope=$('#dzScope');
+  if(scope){scope.textContent=(Nexus.activeSite()===Nexus.ALL)?'ALL sites':'the active site';}
+  var targets=[
+    {name:'suppliers',label:'Suppliers'},
+    {name:'offers',label:'Offers'},
+    {name:'materials',label:'Materials'},
+    {name:'prs',label:'Purchase Requests'},
+    {name:'notifications',label:'Notifications'},
+    {name:'activity',label:'Activity'}
+  ];
+  var html='';
+  targets.forEach(function(t){
+    html+='<button class="btn btn-no btn-sm" onclick="wipeData(\''+t.name+'\',\''+t.label+'\')">🗑️ Delete all '+t.label+'</button>';
+  });
+  html+='<button class="btn btn-no btn-sm" style="background:var(--red);color:#fff" onclick="wipeEverything()">🔥 Reset all data</button>';
+  box.innerHTML=html;
+}
+
+/**
+ * Bulk-delete one collection for the active site after a typed confirmation.
+ * @param {string} shortName
+ * @param {string} label
+ */
+function wipeData(shortName,label){
+  if(!window.Nexus||!Nexus.isAdmin()){toast('Only administrators can delete');return;}
+  var where=(Nexus.activeSite()===Nexus.ALL)?'ALL sites':'this site';
+  var ans=prompt('This permanently deletes all '+label+' for '+where+'.\nType DELETE to confirm:');
+  if(ans!=='DELETE'){toast('Cancelled');return;}
+  Nexus.wipe(shortName).then(function(n){toast('Deleted '+n+' '+label+' record'+(n===1?'':'s'));}).catch(function(e){toast(e.message||'Could not delete');});
+}
+
+/** Wipe every Nexus data collection for the active site (typed confirmation). */
+function wipeEverything(){
+  if(!window.Nexus||!Nexus.isAdmin()){toast('Only administrators can delete');return;}
+  var where=(Nexus.activeSite()===Nexus.ALL)?'ALL sites':'this site';
+  var ans=prompt('⚠️ This permanently deletes ALL procurement data (suppliers, offers, materials, requests, notifications, activity) for '+where+'.\nUsers and sites are NOT removed.\nType RESET to confirm:');
+  if(ans!=='RESET'){toast('Cancelled');return;}
+  var cols=['suppliers','offers','materials','prs','notifications','activity'];
+  Promise.all(cols.map(function(c){return Nexus.wipe(c).catch(function(){return 0;});})).then(function(counts){
+    var total=counts.reduce(function(a,b){return a+b;},0);
+    toast('Reset complete — '+total+' records deleted');
+  });
 }
 
 /**
@@ -1351,6 +1431,7 @@ function boot(){
   renderUsersSection();
   renderThemeOptions();
   renderBackupActions();
+  renderDangerZone();
   Nexus.applyChrome('settings');
   loadSitesFromFirestore();
   loadUsersFromFirestore();

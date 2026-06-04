@@ -305,6 +305,40 @@
     return db.collection("nexus_" + shortName).doc(id).set(doc, { merge: true });
   }
 
+  /* ---------- deletes (admin only) ---------- */
+
+  /**
+   * Delete a single document by id. Restricted to administrators.
+   * @param {string} shortName - collection without "nexus_" prefix.
+   * @param {string} id
+   * @returns {Promise}
+   */
+  function remove(shortName, id) {
+    if (!isAdmin()) { return Promise.reject(new Error("Only administrators can delete data")); }
+    if (!db || !id) { return Promise.reject(new Error("offline")); }
+    return db.collection("nexus_" + shortName).doc(id).delete();
+  }
+
+  /**
+   * Bulk-delete every document in a collection. Restricted to administrators.
+   * Scoped to the active site unless the admin is viewing "All sites".
+   * @param {string} shortName - collection without "nexus_" prefix.
+   * @returns {Promise<number>} number of documents deleted.
+   */
+  function wipe(shortName) {
+    if (!isAdmin()) { return Promise.reject(new Error("Only administrators can delete data")); }
+    if (!db) { return Promise.reject(new Error("offline")); }
+    var col = db.collection("nexus_" + shortName);
+    var q = col;
+    if (activeSite() !== ALL) { q = col.where("siteId", "==", activeSite()); }
+    return q.get().then(function (snap) {
+      if (snap.empty) { return 0; }
+      var batch = db.batch();
+      snap.docs.forEach(function (d) { batch.delete(d.ref); });
+      return batch.commit().then(function () { return snap.size; });
+    });
+  }
+
   /* ---------- chrome: identity, nav filtering, site switcher ---------- */
 
   /**
@@ -423,6 +457,8 @@
     load: load,
     add: add,
     set: set,
+    remove: remove,
+    wipe: wipe,
     applyIdentity: applyIdentity,
     guardSection: guardSection,
     applyChrome: applyChrome

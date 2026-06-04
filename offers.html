@@ -889,6 +889,9 @@ function renderOffersGrid(){
       html+='<button class="btn btn-ok btn-sm" onclick="convertToPR(\''+o.id+'\')" aria-label="Convert '+o.id+' to Purchase Request">📋 Convert to PR</button>';
     }
     html+='<button class="btn btn-ghost btn-sm" onclick="openCounterModal(\''+o.id+'\')" aria-label="Log counter-offer for '+o.id+'">🤝 Counter-offer</button>';
+    if(window.Nexus&&Nexus.isAdmin()){
+      html+='<button class="btn btn-no btn-sm" onclick="deleteOffer(\''+o.id+'\')" aria-label="Delete offer '+o.id+'" title="Delete offer (admin)">🗑️</button>';
+    }
     html+='</div>';
 
     /* negotiation history section */
@@ -996,6 +999,22 @@ function openCompareModal(){
 
   $('#cmpTableWrap').innerHTML=tableHTML;
   openModal('compareModal');
+}
+
+/* ---- Delete offer (admin only) ---- */
+/**
+ * Delete an offer after confirmation, then refresh the grid.
+ * @param {string} offerId
+ */
+function deleteOffer(offerId){
+  var o=SEED.offers.find(function(x){return x.id===offerId;});
+  if(!o)return;
+  if(!window.Nexus||!Nexus.isAdmin()){toast('Only administrators can delete');return;}
+  if(!confirm('Delete this offer from '+o.supplier+'? This cannot be undone.'))return;
+  Nexus.remove('offers',offerId).then(function(){
+    toast('Offer deleted');
+    Nexus.load([{name:'offers',apply:function(a){SEED.offers=a.map(normOffer);}}]).then(function(){renderKPIs();renderOffersGrid();});
+  }).catch(function(e){toast(e.message||'Could not delete');});
 }
 
 /* ---- Convert to Purchase Request ---- */
