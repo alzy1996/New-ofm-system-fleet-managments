@@ -36,15 +36,35 @@
   global.auth = auth; global.storage = storage;
 
   /* ---- secure file upload (whitelist + magic bytes + UUID + Cloud Storage) ---- */
-  var ALLOW = { jpg: [[0xFF, 0xD8, 0xFF]], jpeg: [[0xFF, 0xD8, 0xFF]], png: [[0x89, 0x50, 0x4E, 0x47]], pdf: [[0x25, 0x50, 0x44, 0x46]], docx: [[0x50, 0x4B, 0x03, 0x04]] };
+  var CLD_NAME = "dxYOURNAME";
+  var CLD_PRESET = "nexus_unsigned";
+  var ALLOW = { jpg: [[0xFF, 0xD8, 0xFF]], jpeg: [[0xFF, 0xD8, 0xFF]], png: [[0x89, 0x50, 0x4E, 0x47]], pdf: [[0x25, 0x50, 0x44, 0x46]] };
   var BLOCK = /\.(php|phtml|php5|pht|phar|jsp|asp|aspx|py|sh|exe|bat|cmd|js|html?)$/i;
   var MAXB = 5 * 1024 * 1024;
   function uuid() { return crypto.randomUUID ? crypto.randomUUID() : Date.now() + "" + Math.random().toString(36).slice(2); }
   function magicOK(b, sigs) { return sigs.some(function (s) { return s.every(function (x, i) { return b[i] === x; }); }); }
 
   /**
-   * Validate (extension + magic bytes + size), rename to a UUID, upload to
-   * Cloud Storage (never Hosting). @param {File} file @param {string} folder
+   * Cloudinary unsigned upload. @param {Blob} blob @param {string} folder
+   * @returns {Promise<{url:string,path:string}>} resolves with secure_url.
+   */
+  function cloudinaryUpload(blob, folder) {
+    var fd = new FormData();
+    fd.append("file", blob);
+    fd.append("upload_preset", CLD_PRESET);
+    if (folder) { fd.append("folder", folder); }
+    fd.append("public_id", uuid());
+    return fetch("https://api.cloudinary.com/v1_1/" + CLD_NAME + "/auto/upload", { method: "POST", body: fd })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.secure_url) { throw new Error((j && j.error && j.error.message) || "Upload failed"); }
+        return { url: j.secure_url, path: j.public_id };
+      });
+  }
+
+  /**
+   * Validate (ext + magic bytes + size, block executables) then upload to
+   * Cloudinary. @param {File} file @param {string} folder
    * @returns {Promise<{url:string,path:string}>}
    */
   function uploadFile(file, folder) {
@@ -52,27 +72,19 @@
       if (!file) { return rej(new Error("No file")); }
       if (file.size > MAXB) { return rej(new Error("Max 5MB")); }
       var nm = (file.name || "").toLowerCase(), ext = nm.split(".").pop();
-      if (BLOCK.test(nm) || !ALLOW[ext]) { return rej(new Error("Only pdf, jpg, png, docx")); }
+      if (BLOCK.test(nm) || !ALLOW[ext]) { return rej(new Error("Only jpg, png, pdf")); }
       var fr = new FileReader();
       fr.onload = function () {
         if (!magicOK(new Uint8Array(fr.result), ALLOW[ext])) { return rej(new Error("Content does not match extension")); }
-        var uid = (auth && auth.currentUser && auth.currentUser.uid) || "anon";
-        var path = folder + "/" + uid + "/" + uuid() + "." + ext;
-        storage.ref(path).put(file, { contentType: file.type }).then(function (s) { return s.ref.getDownloadURL(); })
-          .then(function (url) { res({ url: url, path: path }); }).catch(rej);
+        cloudinaryUpload(file, folder).then(res).catch(rej);
       };
       fr.onerror = function () { rej(new Error("Read failed")); };
       fr.readAsArrayBuffer(file.slice(0, 8));
     });
   }
 
-  /** Upload a generated blob (e.g. signature PNG) — trusted, no magic check. */
-  function uploadBlob(blob, folder, ext) {
-    var uid = (auth && auth.currentUser && auth.currentUser.uid) || "anon";
-    var path = folder + "/" + uid + "/" + uuid() + "." + ext;
-    return storage.ref(path).put(blob).then(function (s) { return s.ref.getDownloadURL(); })
-      .then(function (url) { return { url: url, path: path }; });
-  }
+  /** Upload a generated blob (e.g. signature PNG) to Cloudinary — trusted, no magic check. */
+  function uploadBlob(blob, folder, ext) { void ext; return cloudinaryUpload(blob, folder); }
 
   /** Save FIRST, then open WhatsApp after 500ms. */
   function sendWhatsApp(number, msg, saveFn) {
