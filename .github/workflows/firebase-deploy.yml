@@ -48,11 +48,11 @@ jobs:
           if [ -f "$HOME/sa.json" ]; then export GOOGLE_APPLICATION_CREDENTIALS="$HOME/sa.json"; fi
           if [ -n "$FIREBASE_TOKEN" ]; then
             echo "Authenticating with FIREBASE_TOKEN (CI token)…"
-            firebase deploy --only hosting,firestore:rules,storage \
+            firebase deploy --only hosting,firestore:rules \
               --project procurement-erp-6e271 --non-interactive \
               --token "$FIREBASE_TOKEN"
           else
             echo "Authenticating with service account (GOOGLE_APPLICATION_CREDENTIALS)…"
-            firebase deploy --only hosting,firestore:rules,storage \
+            firebase deploy --only hosting,firestore:rules \
               --project procurement-erp-6e271 --non-interactive
           fi
