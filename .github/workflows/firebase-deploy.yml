@@ -30,17 +30,29 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Write service account key
+      - name: Write service account key (if provided)
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$HOME/sa.json"
-          node -e "const p=require(process.env.HOME+'/sa.json'); if(!p.project_id) throw new Error('Invalid service-account JSON'); console.log('Service account OK -> project_id:', p.project_id);"
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$HOME/sa.json"
+            node -e "const p=require(process.env.HOME+'/sa.json'); if(!p.project_id) throw new Error('Invalid service-account JSON'); console.log('Service account OK -> project_id:', p.project_id);"
+          else
+            echo "No FIREBASE_SERVICE_ACCOUNT secret set — will rely on FIREBASE_TOKEN."
+          fi
 
       - name: Deploy hosting + Firestore rules
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/sa.json"
-          firebase deploy \
-            --only hosting,firestore:rules \
-            --project procurement-erp-6e271 \
-            --non-interactive
+          if [ -f "$HOME/sa.json" ]; then export GOOGLE_APPLICATION_CREDENTIALS="$HOME/sa.json"; fi
+          if [ -n "$FIREBASE_TOKEN" ]; then
+            echo "Authenticating with FIREBASE_TOKEN (CI token)…"
+            firebase deploy --only hosting,firestore:rules \
+              --project procurement-erp-6e271 --non-interactive \
+              --token "$FIREBASE_TOKEN"
+          else
+            echo "Authenticating with service account (GOOGLE_APPLICATION_CREDENTIALS)…"
+            firebase deploy --only hosting,firestore:rules \
+              --project procurement-erp-6e271 --non-interactive
+          fi
